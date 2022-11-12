@@ -3,7 +3,8 @@ struct VSOut {
     @location(0) color: vec3<f32>,
  };
 
-@stage(vertex)
+// @stage(vertex)
+@vertex
 fn main(@location(0) inPos: vec3<f32>,
         @location(1) inColor: vec3<f32>) -> VSOut {
     var vsOut: VSOut;
