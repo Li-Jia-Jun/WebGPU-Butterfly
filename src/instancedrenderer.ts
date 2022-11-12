@@ -1,6 +1,18 @@
+import { mat4, vec3 } from 'gl-matrix';
+import {
+    cubeVertexArray,
+    cubeVertexSize,
+    cubeUVOffset,
+    cubePositionOffset,
+    cubeVertexCount,
+  } from './meshes/cube';
+
+import instancedVertWGSL from './shaders/instanced.vert.wgsl';
+import basicVertWGSL from './shaders/basic.vert.wgsl';
+import vertexPositionColorWGSL from './shaders/vertexPositionColor.frag.wgsl';
 import vertShaderCode from './shaders/triangle.vert.wgsl';
 import fragShaderCode from './shaders/triangle.frag.wgsl';
-
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 // 📈 Position Vertex Buffer Data
 const positions = new Float32Array([
     1.0, -1.0, 0.0, -1.0, -1.0, 0.0, 0.0, 1.0, 0.0
@@ -9,7 +21,7 @@ const positions = new Float32Array([
 const colors = new Float32Array([
     1.0,
     0.0,
-    0.0, // 🔴
+    1.0, // 🔴
     0.0,
     1.0,
     0.0, // 🟢
@@ -18,9 +30,43 @@ const colors = new Float32Array([
     1.0 // 🔵
 ]);
 
+//instanced cube Buffer Data
+const xCount = 4;
+const yCount = 4;
+const numInstances = xCount * yCount;
+const matrixFloatCount = 16; // 4x4 matrix
+const matrixSize = 4 * matrixFloatCount;
+const uniformBufferSize = numInstances * matrixSize;
+
+const myCanvas = document.getElementById('gfx') as HTMLCanvasElement;
+
+//width / height
+//const aspect = myCanvas.width / myCanvas.height;
+const projectionMatrix = mat4.create();
+mat4.perspective(projectionMatrix, (2 * Math.PI) / 5, 1, 1, 100.0);
+
+function getTransformationMatrix() {
+    const viewMatrix = mat4.create();
+    mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(0, 0, -4));
+    const now = Date.now() / 1000;
+    mat4.rotate(
+      viewMatrix,
+      viewMatrix,
+      1,
+      vec3.fromValues(Math.sin(now), Math.cos(now), 0)
+    );
+
+    const modelViewProjectionMatrix = mat4.create();
+    mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
+
+    return modelViewProjectionMatrix as Float32Array;
+}
+
 // 📇 Index Buffer Data
 const indices = new Uint16Array([0, 1, 2]);
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+
+
 export default class Renderer {
     canvas: HTMLCanvasElement;
 
@@ -38,14 +84,17 @@ export default class Renderer {
 
     // 🔺 Resources
     positionBuffer: GPUBuffer;
-    colorBuffer: GPUBuffer;
-    indexBuffer: GPUBuffer;
+    uniformBuffer: GPUBuffer;
+    //colorBuffer: GPUBuffer;
+    //indexBuffer: GPUBuffer;
     vertModule: GPUShaderModule;
     fragModule: GPUShaderModule;
     pipeline: GPURenderPipeline;
 
     commandEncoder: GPUCommandEncoder;
     passEncoder: GPURenderPassEncoder;
+
+    uniformBindGroup: GPUBindGroup;
 
     constructor(canvas) {
         this.canvas = canvas;
@@ -108,44 +157,58 @@ export default class Renderer {
             return buffer;
         };
 
-        this.positionBuffer = createBuffer(positions, GPUBufferUsage.VERTEX);
-        this.colorBuffer = createBuffer(colors, GPUBufferUsage.VERTEX);
-        this.indexBuffer = createBuffer(indices, GPUBufferUsage.INDEX);
+        // Create a vertex buffer from the cube/mesh data.
+        this.positionBuffer =  this.device.createBuffer({
+            size: cubeVertexArray.byteLength,
+            usage: GPUBufferUsage.VERTEX,
+            mappedAtCreation: true,
+        });
+        new Float32Array(this.positionBuffer.getMappedRange()).set(cubeVertexArray);
+        this.positionBuffer.unmap();
+
+
+        //----------------------------------------------------------------------//
+        //this.colorBuffer = createBuffer(colors, GPUBufferUsage.VERTEX);
+        //this.indexBuffer = createBuffer(indices, GPUBufferUsage.INDEX);
+        //----------------------------------------------------------------------//
+
 
         // 🖍️ Shaders
         const vsmDesc = {
-            code: vertShaderCode
+            code: basicVertWGSL
         };
         this.vertModule = this.device.createShaderModule(vsmDesc);
 
         const fsmDesc = {
-            code: fragShaderCode
+            code: vertexPositionColorWGSL
         };
         this.fragModule = this.device.createShaderModule(fsmDesc);
 
         // ⚗️ Graphics Pipeline
 
         // 🔣 Input Assembly
+
+        //position asttribute
         const positionAttribDesc: GPUVertexAttribute = {
             shaderLocation: 0, // [[location(0)]]
-            offset: 0,
-            format: 'float32x3'
+            offset: cubePositionOffset,
+            format: 'float32x4'
         };
-        const colorAttribDesc: GPUVertexAttribute = {
+        const UVAttribDesc: GPUVertexAttribute = {
             shaderLocation: 1, // [[location(1)]]
-            offset: 0,
-            format: 'float32x3'
+            offset: cubeUVOffset,
+            format: 'float32x2'
         };
         const positionBufferDesc: GPUVertexBufferLayout = {
-            attributes: [positionAttribDesc],
-            arrayStride: 4 * 3, // sizeof(float) * 3
+            attributes: [positionAttribDesc, UVAttribDesc],
+            arrayStride: cubeVertexSize, // sizeof(float) * 10
             stepMode: 'vertex'
         };
-        const colorBufferDesc: GPUVertexBufferLayout = {
-            attributes: [colorAttribDesc],
-            arrayStride: 4 * 3, // sizeof(float) * 3
-            stepMode: 'vertex'
-        };
+        // const colorBufferDesc: GPUVertexBufferLayout = {
+        //     attributes: [colorAttribDesc],
+        //     arrayStride: 4 * 3, // sizeof(float) * 3
+        //     stepMode: 'vertex'
+        // };
 
         // 🌑 Depth
         const depthStencil: GPUDepthStencilState = {
@@ -155,31 +218,36 @@ export default class Renderer {
         };
 
         // 🦄 Uniform Data
-        const pipelineLayoutDesc = { bindGroupLayouts: [] };
-        const layout = this.device.createPipelineLayout(pipelineLayoutDesc);
+        //const pipelineLayoutDesc = { bindGroupLayouts: [] };
+        //const layout = this.device.createPipelineLayout(pipelineLayoutDesc);
 
+        const layout = 'auto';
         // 🎭 Shader Stages
         const vertex: GPUVertexState = {
             module: this.vertModule,
             entryPoint: 'main',
-            buffers: [positionBufferDesc, colorBufferDesc]
+            buffers: [positionBufferDesc]
         };
 
         // 🌀 Color/Blend State
-        const colorState: GPUColorTargetState = {
-            format: 'bgra8unorm'
-        };
+        // const colorState: GPUColorTargetState = {
+        //     format: 'bgra8unorm'
+        // };
 
         const fragment: GPUFragmentState = {
             module: this.fragModule,
             entryPoint: 'main',
-            targets: [colorState]
+            targets: [
+                {
+                  format: presentationFormat,
+                },
+              ],
         };
 
         // 🟨 Rasterization
         const primitive: GPUPrimitiveState = {
-            frontFace: 'cw',
-            cullMode: 'none',
+            //frontFace: 'cw',
+            cullMode: 'back',
             topology: 'triangle-list'
         };
 
@@ -192,7 +260,27 @@ export default class Renderer {
             primitive,
             depthStencil
         };
+
+        //finish pipeline creation
         this.pipeline = this.device.createRenderPipeline(pipelineDesc);
+
+        const uniformBufferSize = 4 * 16; // 4x4 matrix
+        this.uniformBuffer = this.device.createBuffer({
+            size: uniformBufferSize,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+
+        this.uniformBindGroup = this.device.createBindGroup({
+            layout: this.pipeline.getBindGroupLayout(0),
+            entries: [
+              {
+                binding: 0,
+                resource: {
+                  buffer: this.uniformBuffer,
+                },
+              },
+            ],
+          });
     }
 
     // ↙️ Resize swapchain, frame buffer attachments
@@ -213,9 +301,9 @@ export default class Renderer {
 
         const depthTextureDesc: GPUTextureDescriptor = {
             size: [this.canvas.width, this.canvas.height, 1],
-            dimension: '2d',
+           // dimension: '2d',
             format: 'depth24plus-stencil8',
-            usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
         };
 
         this.depthTexture = this.device.createTexture(depthTextureDesc);
@@ -251,30 +339,45 @@ export default class Renderer {
         // 🖌️ Encode drawing commands
         this.passEncoder = this.commandEncoder.beginRenderPass(renderPassDesc);
         this.passEncoder.setPipeline(this.pipeline);
-        this.passEncoder.setViewport(
-            0,
-            0,
-            this.canvas.width,
-            this.canvas.height,
-            0,
-            1
-        );
-        this.passEncoder.setScissorRect(
-            0,
-            0,
-            this.canvas.width,
-            this.canvas.height
-        );
+        // this.passEncoder.setViewport(
+        //     0,
+        //     0,
+        //     this.canvas.width,
+        //     this.canvas.height,
+        //     0,
+        //     1
+        // );
+        // this.passEncoder.setScissorRect(
+        //     0,
+        //     0,
+        //     this.canvas.width,
+        //     this.canvas.height
+        // );
+        this.passEncoder.setBindGroup(0, this.uniformBindGroup);
         this.passEncoder.setVertexBuffer(0, this.positionBuffer);
-        this.passEncoder.setVertexBuffer(1, this.colorBuffer);
-        this.passEncoder.setIndexBuffer(this.indexBuffer, 'uint16');
-        this.passEncoder.drawIndexed(3, 1);
+        //this.passEncoder.setVertexBuffer(1, this.colorBuffer);
+        //this.passEncoder.setIndexBuffer(this.indexBuffer, 'uint16');
+       // this.passEncoder.drawIndexed(3, 1);
+        this.passEncoder.draw(cubeVertexCount, 1, 0, 0);
         this.passEncoder.end();
 
         this.queue.submit([this.commandEncoder.finish()]);
     }
 
+    
+
     render = () => {
+
+        const transformationMatrix = getTransformationMatrix();
+
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            0,
+            transformationMatrix.buffer,
+            transformationMatrix.byteOffset,
+            transformationMatrix.byteLength
+          );
+        
         // ⏭ Acquire next image from context
         this.colorTexture = this.context.getCurrentTexture();
         this.colorTextureView = this.colorTexture.createView();
