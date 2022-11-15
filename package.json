@@ -31,6 +31,7 @@
         "@webgpu/types": "^0.1.18",
         "clean-webpack-plugin": "^4.0.x",
         "cross-env": "^7.0.x",
+        "gltf-loader-ts": "^0.3.1",
         "http-server": "^14.1.x",
         "ts-loader": "^9.3.x",
         "ts-node": "^10.8.x",
