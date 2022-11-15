@@ -38,6 +38,7 @@
         "webpack": "^5.73.x"
     },
     "dependencies": {
+        "arcball_camera": "^1.0.1",
         "gl-matrix": "^3.4.3"
     }
 }
