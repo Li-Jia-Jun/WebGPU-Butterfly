@@ -1,0 +1,501 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 264,
+      "max": [
+        -6.19808292388916,
+        427.1861267089844,
+        2.354454793022237e-13
+      ],
+      "min": [
+        -242.22315979003906,
+        58.62181854248047,
+        -1.0236544609069824
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 3168,
+      "componentType": 5126,
+      "count": 264,
+      "max": [
+        0.9997920393943787,
+        0.9994707703590393,
+        1.0
+      ],
+      "min": [
+        -0.9997676014900208,
+        -0.9936789274215698,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 264,
+      "max": [
+        0.9917641282081604,
+        0.1280977725982666,
+        0.9989281296730042,
+        1.0
+      ],
+      "min": [
+        -0.9995220899581909,
+        -0.9951314330101013,
+        -4.605227310605642e-09,
+        1.0
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 264,
+      "max": [
+        0.9113484621047974,
+        0.9429028034210205
+      ],
+      "min": [
+        0.2407529354095459,
+        0.05653786659240723
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 876,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 6336,
+      "componentType": 5126,
+      "count": 264,
+      "max": [
+        239.2270965576172,
+        423.7602844238281,
+        1.0236542224884033
+      ],
+      "min": [
+        4.645079612731934,
+        54.531455993652344,
+        -3.552713678800501e-15
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 9504,
+      "componentType": 5126,
+      "count": 264,
+      "max": [
+        0.9999282360076904,
+        0.9991132020950317,
+        1.0
+      ],
+      "min": [
+        -0.9995508193969727,
+        -0.992557942867279,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "byteOffset": 4224,
+      "componentType": 5126,
+      "count": 264,
+      "max": [
+        0.9991801381111145,
+        0.11971259862184525,
+        1.060960563847857e-08,
+        1.0
+      ],
+      "min": [
+        -0.9929443001747131,
+        -0.9960300922393799,
+        -0.9989281296730042,
+        1.0
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 2112,
+      "componentType": 5126,
+      "count": 264,
+      "max": [
+        0.9237432479858398,
+        0.9874527454376221
+      ],
+      "min": [
+        0.016964107751846313,
+        0.492264986038208
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 3504,
+      "componentType": 5125,
+      "count": 876,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 12672,
+      "componentType": 5126,
+      "count": 1698,
+      "max": [
+        37.554443359375,
+        344.1540832519531,
+        51.1636962890625
+      ],
+      "min": [
+        -37.554443359375,
+        180.4979705810547,
+        -17.176416397094727
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 33048,
+      "componentType": 5126,
+      "count": 1698,
+      "max": [
+        0.9999786615371704,
+        0.996846616268158,
+        1.0
+      ],
+      "min": [
+        -0.9999550580978394,
+        -0.9878007173538208,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "byteOffset": 8448,
+      "componentType": 5126,
+      "count": 1698,
+      "max": [
+        0.9992446303367615,
+        0.9805070757865906,
+        0.999943733215332,
+        1.0
+      ],
+      "min": [
+        -0.9743983149528503,
+        -0.9990976452827454,
+        -0.996159017086029,
+        1.0
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 4224,
+      "componentType": 5126,
+      "count": 1698,
+      "max": [
+        0.984484851360321,
+        0.8559215664863586
+      ],
+      "min": [
+        0.7694570422172546,
+        0.5161392092704773
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 7008,
+      "componentType": 5125,
+      "count": 5520,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "Tyler Lazzareschi (https://sketchfab.com/tylerlazzareschi)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/butterfly-49d5ad3857b24f10a8bfc428b4670a33",
+      "title": "Butterfly"
+    },
+    "generator": "Sketchfab-13.74.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 29088,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 17808,
+      "byteOffset": 29088,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 53424,
+      "byteOffset": 46896,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 35616,
+      "byteOffset": 100320,
+      "byteStride": 16,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 135936,
+      "uri": "scene.bin"
+    }
+  ],
+  "images": [
+    {
+      "uri": "textures/lambert1_baseColor.png"
+    },
+    {
+      "uri": "textures/lambert1_metallicRoughness.png"
+    },
+    {
+      "uri": "textures/lambert1_normal.png"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "lambert1",
+      "normalTexture": {
+        "index": 2
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 1
+        },
+        "roughnessFactor": 0.6
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "wing_02_lambert1_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TANGENT": 2,
+            "TEXCOORD_0": 3
+          },
+          "indices": 4,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "wing_01_lambert1_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 6,
+            "POSITION": 5,
+            "TANGENT": 7,
+            "TEXCOORD_0": 8
+          },
+          "indices": 9,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Butterfly_tri_torso_leg_01_lambert1_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 11,
+            "POSITION": 10,
+            "TANGENT": 12,
+            "TEXCOORD_0": 13
+          },
+          "indices": 14,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "7da967ce958c4068ae203788a80cf43d.fbx"
+    },
+    {
+      "children": [
+        3
+      ],
+      "name": "RootNode"
+    },
+    {
+      "children": [
+        4,
+        9
+      ],
+      "matrix": [
+        0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Butterfly_tri"
+    },
+    {
+      "children": [
+        5,
+        7
+      ],
+      "name": "wings"
+    },
+    {
+      "children": [
+        6
+      ],
+      "name": "wing_02"
+    },
+    {
+      "mesh": 0,
+      "name": "wing_02_lambert1_0"
+    },
+    {
+      "children": [
+        8
+      ],
+      "name": "wing_01"
+    },
+    {
+      "mesh": 1,
+      "name": "wing_01_lambert1_0"
+    },
+    {
+      "children": [
+        10
+      ],
+      "name": "Butterfly_tri_torso_leg_01"
+    },
+    {
+      "mesh": 2,
+      "name": "Butterfly_tri_torso_leg_01_lambert1_0"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    }
+  ]
+}
