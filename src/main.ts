@@ -19,8 +19,8 @@ export default class Application
     renderer : GltfRenderer;
 
     fov : number = Math.PI * 0.5;
-    zNear : number = 0.01;
-    zFar : number = 500;
+    zNear : number = 0.001;
+    zFar : number = 10;
 
 
     constructor()
@@ -32,9 +32,16 @@ export default class Application
         // Camera
         this.camera = new OrbitCamera();
         this.camera.target = [0, 0, 0];
-        this.camera.maxDistance = 500;
-        this.camera.minDistance = 0.1;
-        this.camera.distance = 150;
+        this.camera.maxDistance = 10;
+        this.camera.minDistance = 0.001;
+        this.camera.distance = 3;
+
+        this.canvas.addEventListener('click', ()=>{
+            // console.log("click");
+            this.camera.orbit(this.camera.orbitX + 0.01, this.camera.orbitY + 0.01);
+            this.updateFrame();
+            console.log("camera pos = " + this.camera.position);
+        });
 
         // Renderer
         this.renderer = new GltfRenderer("", this.canvas);
@@ -62,8 +69,6 @@ export default class Application
 
     updateFrame()
     {
-        console.log("camera pos = " + this.camera.position);
-
         // Update renderer
         let projMat = mat4.create();
         const aspect = this.canvas.width / this.canvas.height;

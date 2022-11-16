@@ -1,7 +1,8 @@
 import {GltfLoader}  from 'gltf-loader-ts';
 import {GltfAsset}  from 'gltf-loader-ts';
-import * as GLTFSpace from 'gltf-loader-ts/lib/gltf'
-import {mat4, vec3} from 'gl-matrix'
+import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
+import GLDFTransform from './gltf_transform';
+import {mat4, vec3} from 'gl-matrix';
 
 
 // Make sure gltf file follows this mapping
@@ -43,6 +44,7 @@ export default class GltfRenderer
     uri : string;
     gltf : GLTFSpace.GlTf;
     asset : GltfAsset;
+    gltf_transform : GLDFTransform;
  
     // WebGPU stuff
     canRun : boolean;
@@ -50,13 +52,15 @@ export default class GltfRenderer
     device : GPUDevice;
     queue: GPUQueue;
 
-    // Frame buffer stuff
+    // Bind group
     static readonly FRAMEBUFFERSIZE : number = Float32Array.BYTES_PER_ELEMENT * 36; // 16+16+3+1
     frameUniformBuffer : GPUBuffer;
     frameBindGroup : GPUBindGroup;
     frameBindGroupLayout : GPUBindGroupLayout;
 
     nodeBindGroupLayout : GPUBindGroupLayout;
+
+    // Pipeline
     gltfPipelineLayout : GPUPipelineLayout;
     shaderModule : GPUShaderModule;
 
@@ -151,8 +155,8 @@ export default class GltfRenderer
 
     async initializeGLTF()
     {
-        // First load GITF
-        await this.loadGITF();
+        // First load GLTF
+        await this.loadGLTF();
 
         // Bind group layout for frame
         this.frameUniformBuffer = this.device.createBuffer
@@ -221,16 +225,18 @@ export default class GltfRenderer
         }
     }
 
-    async loadGITF()
+    async loadGLTF()
     {
         // Load gltf using gltf-loader-ts
         let loader: GltfLoader = new GltfLoader();
         this.asset = await loader.load(this.uri);
-        this.gltf = this.asset.gltf;
-        this.asset.preFetchAll();
-
+        this.gltf = this.asset.gltf;   
+        //this.asset.preFetchAll();
         console.log(this.gltf);
         console.log(this.asset);
+
+        // Init gltf transform
+        this.gltf_transform = new GLDFTransform(this.gltf);
         
         // Mark GPUBufferUsage by accessor for each bufferview 
         // since in many cases bufferviews do not have 'target' property
@@ -252,12 +258,11 @@ export default class GltfRenderer
             }
         }
 
-        // Create GPUBuffer for each bufferview
+        // Create GPUBuffer for each bufferview    
         this.gpuBuffers = [];
         for(let i = 0; i < this.gltf.bufferViews.length; i++)
-        {
+        {  
             const bufferView = this.gltf.bufferViews[i];
-
             const gpuBuffer = this.device.createBuffer
             ({
                 label: bufferView.name,
@@ -266,11 +271,15 @@ export default class GltfRenderer
                 mappedAtCreation: true,
             });
 
-            const gpuBufferArray = new Uint8Array(gpuBuffer.getMappedRange());
-            gpuBufferArray.set((await this.asset.accessorData(bufferView.buffer)).subarray(bufferView.byteOffset, bufferView.byteLength));
-            gpuBuffer.unmap();
+            let gpuBufferArray = new Uint8Array(gpuBuffer.getMappedRange());
+            let wholeArray = new Uint8Array(10);
+            await this.asset.bufferData.get(0).then((value) => {wholeArray = value;});
 
+            let subArray = wholeArray.subarray(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
+            gpuBufferArray.set(subArray);
+            gpuBuffer.unmap();
             this.gpuBuffers.push(gpuBuffer);
+            //console.log("i = " + i + ", byteLength = " + bufferView.byteLength + ", byteOffset = " + bufferView.byteOffset + ", actual buffer = " + subArray);       
         }    
     }
 
@@ -331,13 +340,34 @@ export default class GltfRenderer
 
     setupMeshNode(node : GLTFSpace.Node)
     {
+        let tmpMat = new Float32Array
+        ([  1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0, // -1.0
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0]);
+
         // Create a uniform buffer for this node and populate it with the node's world transform.
         const nodeUniformBuffer = this.device.createBuffer
         ({
             size: 16 * Float32Array.BYTES_PER_ELEMENT,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
-        let bufferData = new Float32Array(node.matrix).buffer;
+
+        let bufferData = new Float32Array(this.gltf_transform.nodeMatrics.get(node)).buffer;
+        // let bufferData = new Float32Array(tmpMat).buffer;
+
         this.device.queue.writeBuffer(nodeUniformBuffer, 0, bufferData);
 
         // Create a bind group containing the uniform buffer for this node.
@@ -403,7 +433,7 @@ export default class GltfRenderer
             },
             primitive: {
               topology: GLTFUtil.gpuPrimitiveTopologyForMode(primitive.mode),
-              cullMode: 'back',
+              cullMode: 'back', // 'back'
             },
             // multisample: {
             //   count: this.app.sampleCount,
@@ -450,7 +480,7 @@ export default class GltfRenderer
         // Command Encoder
         let colorAttachment: GPURenderPassColorAttachment = {
             view: this.colorTextureView,
-            clearValue: { r: 0, g: 0, b: 0, a: 1 },
+            clearValue: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
             loadOp: 'clear',
             storeOp: 'store'
         };
@@ -495,6 +525,7 @@ export default class GltfRenderer
 
                 if(gpuPrimitive.indexBuffer !== undefined)
                 {
+                    
                     this.passEncoder.setIndexBuffer(gpuPrimitive.indexBuffer, gpuPrimitive.indexType, gpuPrimitive.indexOffset);
                     this.passEncoder.drawIndexed(gpuPrimitive.drawCount);
                 }
@@ -526,9 +557,7 @@ export default class GltfRenderer
         // Submit command queue
         this.queue.submit([this.commandEncoder.finish()]);
 
-        requestAnimationFrame(this.renderGLTF);
-
-        console.log("render!");
+        requestAnimationFrame(this.renderGLTF);     
     }
 
     updateFrameBuffer(projMat : mat4, viewMat : mat4, pos : vec3, time : number)
