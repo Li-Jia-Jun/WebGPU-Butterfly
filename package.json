@@ -39,6 +39,7 @@
     },
     "dependencies": {
         "arcball_camera": "^1.0.1",
+        "ez_canvas_controller": "^1.0.0",
         "gl-matrix": "^3.4.3"
     }
 }

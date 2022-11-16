@@ -7,12 +7,14 @@ import {
     cubeVertexCount,
   } from './meshes/cube';
 import{ArcballCamera} from 'arcball_camera'
+import {Controller} from "ez_canvas_controller";
 import InputHandler from './input';
 import instancedVertWGSL from './shaders/instanced.vert.wgsl';
 import basicVertWGSL from './shaders/basic.vert.wgsl';
 import vertexPositionColorWGSL from './shaders/vertexPositionColor.frag.wgsl';
 import vertShaderCode from './shaders/triangle.vert.wgsl';
 import fragShaderCode from './shaders/triangle.frag.wgsl';
+import { Console } from 'console';
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 // 📈 Position Vertex Buffer Data
 const positions = new Float32Array([
@@ -51,7 +53,7 @@ mat4.perspective(projectionMatrix, (2 * Math.PI) / 5, 1, 1, 100.0);
 const indices = new Uint16Array([0, 1, 2]);
 
 
-
+var _renderer = null;
 export default class Renderer {
     canvas: HTMLCanvasElement;
 
@@ -80,25 +82,25 @@ export default class Renderer {
     passEncoder: GPURenderPassEncoder;
 
     uniformBindGroup: GPUBindGroup;
-
+    //uniformBindGroup2: GPUBindGroup;
     camera: ArcballCamera;
     inputHandler: InputHandler;
     constructor(canvas, camera) {
         this.canvas = canvas;
         this.camera = camera;
-        this.canvas.addEventListener("keydown", this.pressKeyEventHandler);
-        this.canvas.addEventListener("mousedown", this.pressMouseEventHandler);
-        this.canvas.addEventListener('keydown', (e) => {
-            if ((e as KeyboardEvent).key === 'Enter') {
-                // do something..
-                console.log("asdasd");
-            }
-        }); 
+        _renderer = this;
         //this.inputHandler = new InputHandler(canvas, camera);
     }
 
     // 🏎️ Start the rendering engine
     async start() {
+      
+
+        var frameId = 0;
+
+        // Register mouse and touch listeners
+        var controller = new Controller();
+        this.setupController(controller);
         if (await this.initializeAPI()) {
             this.resizeBackings();
             await this.initializeResources();
@@ -278,6 +280,18 @@ export default class Renderer {
               },
             ],
           });
+
+        //   this.uniformBindGroup2 = this.device.createBindGroup({
+        //     layout: this.pipeline.getBindGroupLayout(0),
+        //     entries: [
+        //       {
+        //         binding: 0,
+        //         resource: {
+        //           buffer: this.uniformBuffer,
+        //         },
+        //       },
+        //     ],
+        //   });
     }
 
     // ↙️ Resize swapchain, frame buffer attachments
@@ -367,7 +381,7 @@ export default class Renderer {
 
         
         const transformationMatrix = this.getTransformationMatrix();
-
+        
         this.device.queue.writeBuffer(
             this.uniformBuffer,
             0,
@@ -390,7 +404,7 @@ export default class Renderer {
     getTransformationMatrix() {
         // const viewMatrix = mat4.create();
         // mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(0, 0, -4));
-        // const now = Date.now() / 1000;
+        // const now = Date.now() / 1000;+
         // mat4.rotate(
         //   viewMatrix,
         //   viewMatrix,
@@ -404,34 +418,28 @@ export default class Renderer {
         return modelViewProjectionMatrix as Float32Array;
     }
 
-    pressMouseEventHandler = (e: MouseEvent) => {
-        this.mouseClick(e);
-    }
-
-    pressKeyEventHandler = (e: KeyboardEvent) => {
-        console.log("asdasdasd");
-        this.keyPressed(e);
-    }
-
-    mouseClick(e) {
-        var keyName = e.key;
-        console.log("key down", keyName);
-        this.camera.pan(0.05);
-        
-    }
-
-    keyPressed(e) {
-        var keyName = e.key;
-        console.log("key down", keyName);
-        switch(keyName){
-            case "a" :
-                this.camera.pan(-1);
-                break;
-            case "d" :
-                this.camera.pan(1);
-                break;
-            
-
-        }
+    setupController(controller) {
+        var frameId = 0;
+        controller.mousemove = function(prev, cur, evt) {
+            if (evt.buttons == 1) {
+                frameId = 0;  
+                console.log(this);                             
+                _renderer.camera.rotate(prev, cur);
+            } else if (evt.buttons == 2) {
+                frameId = 0;
+                _renderer.camera.pan([cur[0] - prev[0], prev[1] - cur[1]]);
+            }
+        };
+        controller.wheel = function(amt) {
+            frameId = 0;
+            if(amt)
+            _renderer.camera.zoom(amt);
+        };
+        controller.pinch = controller.wheel;
+        controller.twoFingerDrag = function(drag) {
+            frameId = 0;
+            _renderer.camera.pan(drag);
+        };
+        controller.registerForCanvas(_renderer.canvas);
     }
 }
