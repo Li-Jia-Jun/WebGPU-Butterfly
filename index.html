@@ -2,27 +2,36 @@
 <html lang="en-US">
   <head>
     <meta charset="UTF-8" />
-    <title>WebGPU Hello Triangle</title>
+    <title>WebGPU Butterfly</title>
     <style>
       html,
-      body {
+      /* body {
         margin: 0;
         padding: 0;
         border: 0;
         font-size: 100%;
         font: inherit;
         vertical-align: baseline;
-        background: #000;
+        background: rgb(255, 255, 255);
         width: 100%;
         height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-      }
+      } */
+      h1 {text-align: center;}
+      canvas{
+			display: block;
+			margin: 0 auto;
+      background: rgb(255, 255, 255);
+		}
     </style>
   </head>
   <body>
-    <canvas id="gfx"></canvas>
+    <h1>WebGPU Butterfly</h1>
+    <canvas id="gfx">
+    </canvas>
+    <p id="camera_pos"></p>
     <script type="text/javascript" src="dist/main.js"></script>
   </body>
 </html>

@@ -81,10 +81,10 @@ export default class GltfRenderer
     constructor(gltf_uri : string, canvas : HTMLCanvasElement)
     {
         // Example source:
-        // 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf';
-        // this.uri = gltf_uri;
-        this.uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf';
-
+        this.uri = 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/butterfly/butterfly.gltf';
+        // this.uri = 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/BoxTextured/glTF/BoxTextured.gltf';
+        // this.uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoomBox/glTF/BoomBox.gltf';
+        // this.uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF/WaterBottle.gltf';
         this.canvas = canvas;
 
         this.nodeGpuData = new Map();
@@ -231,12 +231,13 @@ export default class GltfRenderer
         let loader: GltfLoader = new GltfLoader();
         this.asset = await loader.load(this.uri);
         this.gltf = this.asset.gltf;   
-        //this.asset.preFetchAll();
+        this.asset.preFetchAll();
         console.log(this.gltf);
         console.log(this.asset);
 
         // Init gltf transform
-        this.gltf_transform = new GLDFTransform(this.gltf);
+        const scale = 0.1;
+        this.gltf_transform = new GLDFTransform(this.gltf, [scale,0,0,0,0,scale,0,0,0,0,scale,0,0,0,0,1]);
         
         // Mark GPUBufferUsage by accessor for each bufferview 
         // since in many cases bufferviews do not have 'target' property
@@ -340,24 +341,6 @@ export default class GltfRenderer
 
     setupMeshNode(node : GLTFSpace.Node)
     {
-        let tmpMat = new Float32Array
-        ([  1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0, // -1.0
-            0.0,
-            0.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0]);
-
         // Create a uniform buffer for this node and populate it with the node's world transform.
         const nodeUniformBuffer = this.device.createBuffer
         ({
@@ -366,7 +349,6 @@ export default class GltfRenderer
         });
 
         let bufferData = new Float32Array(this.gltf_transform.nodeMatrics.get(node)).buffer;
-        // let bufferData = new Float32Array(tmpMat).buffer;
 
         this.device.queue.writeBuffer(nodeUniformBuffer, 0, bufferData);
 
@@ -480,7 +462,7 @@ export default class GltfRenderer
         // Command Encoder
         let colorAttachment: GPURenderPassColorAttachment = {
             view: this.colorTextureView,
-            clearValue: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
+            clearValue: { r: 135 / 255.0, g: 206 / 255.0, b: 250 / 255.0, a: 1 },
             loadOp: 'clear',
             storeOp: 'store'
         };

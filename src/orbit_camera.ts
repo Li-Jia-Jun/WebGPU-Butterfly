@@ -14,7 +14,7 @@ export default class OrbitCamera {
   
     maxDistance = 10;
     minDistance = 1;
-    distanceStep = 0.005;
+    distanceStep = 0.001; // 0.005
     constrainDistance = true;
   
     #distance = vec3.fromValues(0, 0, 5);
@@ -27,7 +27,7 @@ export default class OrbitCamera {
     #element;
     #registerElement;
   
-    constructor(element = null) {
+    constructor(element = null, refresh : CallableFunction) {
       let moving = false;
       let lastX, lastY;
   
@@ -40,9 +40,7 @@ export default class OrbitCamera {
       };
       const moveCallback = (event) => {
         let xDelta, yDelta;
-  
-        // if(document.pointerLockEnabled) {
-        if(true){
+        if(document.pointerLockElement) {
             xDelta = event.movementX;
             yDelta = event.movementY;
             this.orbit(xDelta * 0.025, yDelta * 0.025);
@@ -53,6 +51,7 @@ export default class OrbitCamera {
             lastY = event.pageY;
             this.orbit(xDelta * 0.025, yDelta * 0.025);
         }
+        refresh();
       };
       const upCallback = (event) => {
         if (event.isPrimary) {
@@ -62,6 +61,7 @@ export default class OrbitCamera {
       const wheelCallback = (event) => {
         this.distance = this.#distance[2] + (-event.wheelDeltaY * this.distanceStep);
         event.preventDefault();
+        refresh();
       };
   
       this.#registerElement = (value) => {
