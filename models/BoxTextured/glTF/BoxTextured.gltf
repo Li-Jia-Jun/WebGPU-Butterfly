@@ -60,7 +60,7 @@
         {
             "bufferView": 0,
             "byteOffset": 0,
-            "componentType": 5123, // float
+            "componentType": 5123,
             "count": 36,
             "max": [
                 23
