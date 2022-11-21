@@ -22,7 +22,17 @@ let config: webpack.Configuration = {
         modules: [path.resolve(__dirname, 'src'), 'node_modules']
     },
     module: {
-        rules: [
+        rules: [        
+            {
+                test: /\.js$/,
+                type: "javascript/auto",
+            },
+            {
+                test: /\.js$/,
+                resolve: {
+                  fullySpecified: false
+                }
+            },
             {
                 test: /\.ts/,
                 exclude: /node_modules/,
@@ -32,7 +42,10 @@ let config: webpack.Configuration = {
                     compilerOptions: {
                         isolatedModules: true
                     }
-                }
+                },
+                resolve: {
+                    fullySpecified: false
+                  }
             },
             {
                 test: /\.wgsl/,

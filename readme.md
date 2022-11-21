@@ -22,4 +22,3 @@ Next step:
 - GLTF texture and animation support
 - Implement full content from the reference paper including force simulation and maneuvering control
 - More robust UI
-
