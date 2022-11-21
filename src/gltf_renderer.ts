@@ -1,11 +1,13 @@
-import {GltfLoader}  from 'gltf-loader-ts';
-import {GltfAsset}  from 'gltf-loader-ts';
+
+import vertShaderCode from './shaders/gltf.vert.wgsl';
+import fragShaderCode from './shaders/gltf.frag.wgsl';
+
 import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
-import GLDFTransform from './gltf_transform';
 import {mat4, vec3} from 'gl-matrix';
+import GLTFGroup from './gltf_group';
 
 
-// Make sure gltf file follows this mapping
+// Make sure the shaders follow this mapping
 const ShaderLocations = 
 {
     POSITION: 0,
@@ -41,13 +43,9 @@ export default class GltfRenderer
     gpuBuffers : GPUBuffer[];
    
     // GLTF stuff
-    uri : string;
-    gltf : GLTFSpace.GlTf;
-    asset : GltfAsset;
-    gltf_transform : GLDFTransform;
+    gltf_group : GLTFGroup;
  
     // WebGPU stuff
-    canRun : boolean;
     adapter : GPUAdapter;
     device : GPUDevice;
     queue: GPUQueue;
@@ -55,14 +53,20 @@ export default class GltfRenderer
     // Bind group
     static readonly FRAMEBUFFERSIZE : number = Float32Array.BYTES_PER_ELEMENT * 36; // 16+16+3+1
     frameUniformBuffer : GPUBuffer;
-    frameBindGroup : GPUBindGroup;
     frameBindGroupLayout : GPUBindGroupLayout;
+    frameBindGroup : GPUBindGroup;
 
     nodeBindGroupLayout : GPUBindGroupLayout;
+
+    instanceBuffer : GPUBuffer;
+    instanceBindGroupLayout : GPUBindGroupLayout;
+    instanceBindGroup : GPUBindGroup;
 
     // Pipeline
     gltfPipelineLayout : GPUPipelineLayout;
     shaderModule : GPUShaderModule;
+    vertShaderModule : GPUShaderModule;
+    fragShaderModule : GPUShaderModule;
 
     context: GPUCanvasContext;
     colorTexture: GPUTexture;
@@ -77,61 +81,33 @@ export default class GltfRenderer
     canvas : HTMLCanvasElement;
 
 
+    constructor(){}
 
-    constructor(gltf_uri : string, canvas : HTMLCanvasElement)
-    {
-        // Example source:
-        this.uri = 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/butterfly/butterfly.gltf';
-        // this.uri = 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/BoxTextured/glTF/BoxTextured.gltf';
-        // this.uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoomBox/glTF/BoomBox.gltf';
-        // this.uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF/WaterBottle.gltf';
+    async init(adapter : GPUAdapter, device : GPUDevice, queue : GPUQueue, canvas : HTMLCanvasElement, gltf_group : GLTFGroup)
+    {     
+        this.adapter = adapter;
+        this.device = device;
+        this.queue = queue;
+
+        this.gltf_group = gltf_group;
+
         this.canvas = canvas;
 
         this.nodeGpuData = new Map();
         this.primitiveGpuData = new Map();
-    }
 
-    async start()
-    {
-        if(await this.initializeWebGPU())
-        {
-            this.resizeBackings();
-            await this.initializeGLTF(); 
-            return true;
-        }
-
-        return false;
-    }
-
-    async initializeWebGPU(): Promise<boolean> 
-    {
-        try 
-        {
-            const entry: GPU = navigator.gpu;
-            if (!entry) 
-            {
-                return false;
-            }
-
-            this.adapter = await entry.requestAdapter();
-            this.device = await this.adapter.requestDevice();
-            this.queue = this.device.queue;
-        } 
-        catch (e) 
-        {
-            console.error(e);
-            return false;
-        }
-
-        return true;
+        this.resizeBackings();
+        await this.initializeWebGPUAndGLTF(); 
     }
 
     resizeBackings() 
     {
         // Swapchain
-        if (!this.context) {
+        if (!this.context) 
+        {
             this.context = this.canvas.getContext('webgpu');
-            const canvasConfig: GPUCanvasConfiguration = {
+            const canvasConfig: GPUCanvasConfiguration = 
+            {
                 device: this.device,
                 format: 'bgra8unorm',
                 usage:
@@ -142,7 +118,8 @@ export default class GltfRenderer
             this.context.configure(canvasConfig);
         }
 
-        const depthTextureDesc: GPUTextureDescriptor = {
+        const depthTextureDesc: GPUTextureDescriptor = 
+        {
             size: [this.canvas.width, this.canvas.height, 1],
             dimension: '2d',
             format: 'depth24plus-stencil8',
@@ -153,11 +130,38 @@ export default class GltfRenderer
         this.depthTextureView = this.depthTexture.createView();
     }
 
-    async initializeGLTF()
+    async initializeWebGPUAndGLTF()
     {
-        // First load GLTF
-        await this.loadGLTF();
+        // Load all gltf data into GPUBuffers 
+        await this.loadGPUBuffers();
 
+        // Bind Groups
+        this.initFrameBindGroup();
+        this.initNodeBindGroup();
+        this.initInstanceBindGroup();
+
+        // Pipeline Layout
+        this.gltfPipelineLayout = this.device.createPipelineLayout
+        ({
+            label: 'glTF Pipeline Layout',
+            bindGroupLayouts: [
+                this.frameBindGroupLayout,
+                this.nodeBindGroupLayout,
+                this.instanceBindGroupLayout,
+        ]});
+
+        // Loop through each primitive of each mesh and create a compatible WebGPU pipeline.
+        for (const mesh of this.gltf_group.gltf.meshes) 
+        {
+            for (const primitive of mesh.primitives) 
+            {
+                this.setupPrimitive(primitive);
+            }
+        }
+    }
+
+    initFrameBindGroup()
+    {
         // Bind group layout for frame
         this.frameUniformBuffer = this.device.createBuffer
         ({
@@ -184,76 +188,77 @@ export default class GltfRenderer
                 resource: { buffer: this.frameUniformBuffer },
             }],
         });
+    }
 
+    initNodeBindGroup()
+    {
         // Bind group layout for the transform uniforms of each node.
         this.nodeBindGroupLayout = this.device.createBindGroupLayout({
-        label: `glTF Node BindGroupLayout`,
-        entries: [{
-            binding: 0, // Node uniforms
-            visibility: GPUShaderStage.VERTEX,
-            buffer: {},
-        }],
-        });
-
-        // Everything we'll render with these pages can share a single pipeline layout.
-        // A more advanced renderer supporting things like skinning or multiple material types
-        // may need more.
-        this.gltfPipelineLayout = this.device.createPipelineLayout({
-        label: 'glTF Pipeline Layout',
-        bindGroupLayouts: [
-            this.frameBindGroupLayout,
-            this.nodeBindGroupLayout,
-        ]
-        });
+            label: `glTF Node BindGroupLayout`,
+            entries: [{
+                binding: 0, // Node uniforms
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {},
+            }],
+            });
 
         // Find every node with a mesh and create a bind group containing the node's transform.
-        for (const node of this.gltf.nodes)
+        for (const node of this.gltf_group.gltf.nodes)
         {
             if ('mesh' in node) 
             {
-                this.setupMeshNode(node);
-            }
-        }
-
-        // Loop through each primitive of each mesh and create a compatible WebGPU pipeline.
-        for (const mesh of this.gltf.meshes) 
-        {
-            for (const primitive of mesh.primitives) 
-            {
-                this.setupPrimitive(primitive);
+                this.setupMeshNodeBindGroup(node);
             }
         }
     }
 
-    async loadGLTF()
+    initInstanceBindGroup()
     {
-        // Load gltf using gltf-loader-ts
-        let loader: GltfLoader = new GltfLoader();
-        this.asset = await loader.load(this.uri);
-        this.gltf = this.asset.gltf;   
-        this.asset.preFetchAll();
-        console.log(this.gltf);
-        console.log(this.asset);
+        this.instanceBuffer = this.device.createBuffer
+        ({
+            size: 16 * this.gltf_group.instanceCount * Float32Array.BYTES_PER_ELEMENT,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+        this.instanceBindGroupLayout = this.device.createBindGroupLayout
+        ({
+            label: `glTF Instance BindGroupLayout`,
+            entries: [{
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {type: 'read-only-storage'},
+            }]
+        });
+        this.instanceBindGroup = this.device.createBindGroup
+        ({
+            label: `Instance BindGroup`,
+            layout: this.instanceBindGroupLayout,
+            entries: 
+            [{
+                binding: 0,
+                resource: { buffer: this.instanceBuffer },
+            }],
+        });
+    }
 
-        // Init gltf transform
-        const scale = 0.1;
-        this.gltf_transform = new GLDFTransform(this.gltf, [scale,0,0,0,0,scale,0,0,0,0,scale,0,0,0,0,1]);
+    async loadGPUBuffers()
+    {
+        // TODO:: Create instanced bind group
         
         // Mark GPUBufferUsage by accessor for each bufferview 
         // since in many cases bufferviews do not have 'target' property
         const bufferViewUsages = [];
-        for (const mesh of this.gltf.meshes) 
+        for (const mesh of this.gltf_group.gltf.meshes) 
         {
             for (const primitive of mesh.primitives) 
             {
                 if (primitive.indices !== undefined) 
                 {
-                    const accessor = this.gltf.accessors[primitive.indices];
+                    const accessor = this.gltf_group.gltf.accessors[primitive.indices];
                     bufferViewUsages[accessor.bufferView] |= GPUBufferUsage.INDEX;
                 }
                 for (const attribute of Object.values(primitive.attributes))
                 {
-                    const accessor = this.gltf.accessors[attribute];
+                    const accessor = this.gltf_group.gltf.accessors[attribute];
                     bufferViewUsages[accessor.bufferView] |= GPUBufferUsage.VERTEX;
                 }
             }
@@ -261,9 +266,9 @@ export default class GltfRenderer
 
         // Create GPUBuffer for each bufferview    
         this.gpuBuffers = [];
-        for(let i = 0; i < this.gltf.bufferViews.length; i++)
+        for(let i = 0; i < this.gltf_group.gltf.bufferViews.length; i++)
         {  
-            const bufferView = this.gltf.bufferViews[i];
+            const bufferView = this.gltf_group.gltf.bufferViews[i];
             const gpuBuffer = this.device.createBuffer
             ({
                 label: bufferView.name,
@@ -274,7 +279,7 @@ export default class GltfRenderer
 
             let gpuBufferArray = new Uint8Array(gpuBuffer.getMappedRange());
             let wholeArray = new Uint8Array(10);
-            await this.asset.bufferData.get(0).then((value) => {wholeArray = value;});
+            await this.gltf_group.asset.bufferData.get(0).then((value) => {wholeArray = value;}); // Load buffer data from gltf
 
             let subArray = wholeArray.subarray(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
             gpuBufferArray.set(subArray);
@@ -284,71 +289,40 @@ export default class GltfRenderer
         }    
     }
 
-    getShaderModule()
+    getVertexShaderModule()
     {
-        // Cache the shader module, since all the pipelines use the same one.
-        if (!this.shaderModule) {
-        // The shader source used here is intentionally minimal. It just displays the geometry
-        // as white with a very simplistic directional lighting based only on vertex normals
-        // (just to show the shape of the mesh a bit better.)
-        const code = `
-            struct Camera {
-            projection : mat4x4<f32>,
-            view : mat4x4<f32>,
-            position : vec3<f32>,
-            time : f32,
-            };
-            @group(0) @binding(0) var<uniform> camera : Camera;
-            @group(1) @binding(0) var<uniform> model : mat4x4<f32>;
-            struct VertexInput {
-            @location(${ShaderLocations.POSITION}) position : vec3<f32>,
-            @location(${ShaderLocations.NORMAL}) normal : vec3<f32>,
-            };
-            struct VertexOutput {
-            @builtin(position) position : vec4<f32>,
-            @location(0) normal : vec3<f32>,
-            };
-            @vertex
-            fn vertexMain(input : VertexInput) -> VertexOutput {
-            var output : VertexOutput;
-            output.position = camera.projection * camera.view * model * vec4(input.position, 1.0);
-            output.normal = normalize((camera.view * model * vec4(input.normal, 0.0)).xyz);
-            return output;
-            }
-            // Some hardcoded lighting
-            const lightDir = vec3(0.25, 0.5, 1.0);
-            const lightColor = vec3(1.0, 1.0, 1.0);
-            const ambientColor = vec3(0.1, 0.1, 0.1);
-            @fragment
-            fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32> {
-            // An extremely simple directional lighting model, just to give our model some shape.
-            let N = normalize(input.normal);
-            let L = normalize(lightDir);
-            let NDotL = max(dot(N, L), 0.0);
-            let surfaceColor = ambientColor + NDotL;
-            return vec4(surfaceColor, 1.0);
-            }
-        `;
-
-        this.shaderModule = this.device.createShaderModule({
-            label: 'Simple glTF rendering shader module',
-            code,
-        });
+        if (!this.vertShaderModule)
+        {
+            this.vertShaderModule = this.device.createShaderModule({
+                label: 'glTF vertex shader module',
+                code : vertShaderCode
+            });
         }
-
-        return this.shaderModule;
+        return this.vertShaderModule;
     }
 
-    setupMeshNode(node : GLTFSpace.Node)
+    getFragmentShaderModule()
     {
-        // Create a uniform buffer for this node and populate it with the node's world transform.
+        if (!this.fragShaderModule)
+        {
+            this.fragShaderModule = this.device.createShaderModule({
+                label: 'glTF fragment shader module',
+                code : fragShaderCode
+            });
+        }
+        return this.fragShaderModule;
+    }
+
+    setupMeshNodeBindGroup(node : GLTFSpace.Node)
+    {
+        // Bind node transform matrix
         const nodeUniformBuffer = this.device.createBuffer
         ({
             size: 16 * Float32Array.BYTES_PER_ELEMENT,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
-        let bufferData = new Float32Array(this.gltf_transform.nodeMatrics.get(node)).buffer;
+        let bufferData = new Float32Array(this.gltf_group.nodeMatrics.get(node)).buffer;
 
         this.device.queue.writeBuffer(nodeUniformBuffer, 0, bufferData);
 
@@ -369,14 +343,15 @@ export default class GltfRenderer
 
     setupPrimitive(primitive : GLTFSpace.MeshPrimitive)
     {
-        const bufferLayout = [];
+        const bufferLayout : GPUVertexBufferLayout[] = [];
         const primitiveGpuBuffers : GPUPrimitiveBufferInfo[] = [];
         let drawCount = 0;
 
+        // Get GPUBuffer for each accessor inside the primitive
         for (const [attribName, accessorIndex] of Object.entries(primitive.attributes)) 
         {
-            const accessor = this.gltf.accessors[accessorIndex];
-            const bufferView = this.gltf.bufferViews[accessor.bufferView];
+            const accessor = this.gltf_group.gltf.accessors[accessorIndex];
+            const bufferView = this.gltf_group.gltf.bufferViews[accessor.bufferView];
 
             // Get the shader location for this attribute. If it doesn't have one skip over the
             // attribute because we don't need it for rendering (yet).
@@ -388,12 +363,11 @@ export default class GltfRenderer
             // the attribute data is interleaved.
             bufferLayout.push({
                 arrayStride: bufferView.byteStride || GLTFUtil.packedArrayStrideForAccessor(accessor),
-                attributes: [{
-                  shaderLocation,
-                  format: GLTFUtil.gpuFormatForAccessor(accessor),
-                  offset: 0,  // Explicitly set to zero now.
-                }]
-              });
+                attributes : [{                
+                    format: GLTFUtil.gpuFormatForAccessor(accessor) as GPUVertexFormat,
+                    offset: 0,  // Explicitly set to zero now.
+                    shaderLocation: shaderLocation}]
+            });
 
             // Since we're skipping some attributes, we need to track the WebGPU buffers that are
             // used here so that we can bind them in the correct order at draw time.
@@ -404,12 +378,13 @@ export default class GltfRenderer
             drawCount = accessor.count;
         }
 
-        const module = this.getShaderModule();
+        const vertModule = this.getVertexShaderModule();
+        const fragModule = this.getFragmentShaderModule();
         const pipeline = this.device.createRenderPipeline({
             label: 'glTF renderer pipeline',
             layout: this.gltfPipelineLayout,
             vertex: {
-              module,
+              module: vertModule,
               entryPoint: 'vertexMain',
               buffers: bufferLayout,
             },
@@ -426,7 +401,7 @@ export default class GltfRenderer
                 format: 'depth24plus-stencil8'
             },
             fragment: {
-              module,
+              module : fragModule,
               entryPoint: 'fragmentMain',
               targets: [{
                 format: 'bgra8unorm'
@@ -443,7 +418,7 @@ export default class GltfRenderer
         // If the primitive has index data, store the index buffer, offset, type, count as well.
         if ('indices' in primitive) 
         {
-            const accessor = this.gltf.accessors[primitive.indices];
+            const accessor = this.gltf_group.gltf.accessors[primitive.indices];
             gpuPrimitive.indexBuffer = this.gpuBuffers[accessor.bufferView];
             gpuPrimitive.indexOffset = accessor.byteOffset;
             gpuPrimitive.indexType = GLTFUtil.gpuIndexFormatForComponentType(accessor.componentType);
@@ -462,7 +437,7 @@ export default class GltfRenderer
         // Command Encoder
         let colorAttachment: GPURenderPassColorAttachment = {
             view: this.colorTextureView,
-            clearValue: { r: 135 / 255.0, g: 206 / 255.0, b: 250 / 255.0, a: 1 },
+            clearValue: { r: 135 / 255.0, g: 206 / 255.0, b: 250 / 255.0, a: 1 },   // Blue background
             loadOp: 'clear',
             storeOp: 'store'
         };
@@ -486,13 +461,14 @@ export default class GltfRenderer
         this.passEncoder = this.commandEncoder.beginRenderPass(renderPassDesc);
 
         this.passEncoder.setBindGroup(0, this.frameBindGroup);
+        this.passEncoder.setBindGroup(2, this.instanceBindGroup);
 
         // Bind gltf data to render pass
         for (const [node, bindGroup] of this.nodeGpuData)
         {
             this.passEncoder.setBindGroup(1, bindGroup);
 
-            const mesh = this.gltf.meshes[node.mesh];
+            const mesh = this.gltf_group.gltf.meshes[node.mesh];
             for (const primitive of mesh.primitives)
             {
                 const gpuPrimitive = this.primitiveGpuData.get(primitive);
@@ -506,14 +482,13 @@ export default class GltfRenderer
                 }
 
                 if(gpuPrimitive.indexBuffer !== undefined)
-                {
-                    
+                {                  
                     this.passEncoder.setIndexBuffer(gpuPrimitive.indexBuffer, gpuPrimitive.indexType, gpuPrimitive.indexOffset);
-                    this.passEncoder.drawIndexed(gpuPrimitive.drawCount);
+                    this.passEncoder.drawIndexed(gpuPrimitive.drawCount, this.gltf_group.instanceCount);
                 }
                 else
                 {
-                    this.passEncoder.draw(gpuPrimitive.drawCount);
+                    this.passEncoder.draw(gpuPrimitive.drawCount, this.gltf_group.instanceCount);
                 }
             }
         }
@@ -557,6 +532,19 @@ export default class GltfRenderer
         timeArray.set([time]);
 
         this.device.queue.writeBuffer(this.frameUniformBuffer, 0, frameArrayBuffer);
+    }
+
+    updateInstanceBuffer()
+    {
+        let instanceArrayBuffer = new ArrayBuffer(16 * this.gltf_group.instanceCount * Float32Array.BYTES_PER_ELEMENT);
+        for(let[index, mat] of this.gltf_group.transforms.entries())
+        {
+            let st = index * 16 * Float32Array.BYTES_PER_ELEMENT;
+            let arr = new Float32Array(instanceArrayBuffer, st, 16);
+            arr.set(mat);
+        }
+
+        this.device.queue.writeBuffer(this.instanceBuffer, 0, instanceArrayBuffer);
     }
 }
 
