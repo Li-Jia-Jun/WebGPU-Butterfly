@@ -1,6 +1,7 @@
 
 import vertShaderCode from './shaders/gltf.vert.wgsl';
 import fragShaderCode from './shaders/gltf.frag.wgsl';
+import compShaderCode from './shaders/comp.wgsl';
 
 import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
 import {mat4, vec3} from 'gl-matrix';
@@ -77,6 +78,17 @@ export default class GltfRenderer
     commandEncoder: GPUCommandEncoder;
     passEncoder: GPURenderPassEncoder;
 
+    //ComputePipeline
+    computepassEncoder: GPUComputePassEncoder;
+    computePipeline: GPUComputePipeline;
+    computePipelineLayout: GPUPipelineLayout;
+    computeBindGroup: GPUBindGroup;
+    computeBindGroupLayout: GPUBindGroupLayout;
+    computeBuffer: GPUBuffer;
+    compShaderModule : GPUShaderModule;
+    
+
+
     // Web stuff
     canvas : HTMLCanvasElement;
 
@@ -139,6 +151,26 @@ export default class GltfRenderer
         this.initFrameBindGroup();
         this.initNodeBindGroup();
         this.initInstanceBindGroup();
+        this.initComputeBindGroup();
+        
+        //create compute pipeline here, maybe not
+        this.computePipelineLayout = this.device.createPipelineLayout
+        ({
+            label: 'glTF Compute Pipeline Layout',
+            bindGroupLayouts: [
+               this.computeBindGroupLayout,
+            ]
+
+        });
+        const computeModule = this.getComputeShaderModule();
+        this.computePipeline = this.device.createComputePipeline({
+            layout: this.computePipelineLayout,
+            compute: {
+              module: computeModule, 
+              entryPoint: 'simulate',
+            },
+        });
+
 
         // Pipeline Layout
         this.gltfPipelineLayout = this.device.createPipelineLayout
@@ -240,6 +272,34 @@ export default class GltfRenderer
         });
     }
 
+    initComputeBindGroup() {
+        //a 4x4 transformation matrix
+        const computeBufferSize = 4 * 16;
+        this.computeBuffer = this.device.createBuffer ({
+            size: this.gltf_group.instanceCount * computeBufferSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+        this.computeBindGroupLayout = this.device.createBindGroupLayout
+        ({
+            label: `Compute BindGroupLayout`,
+            entries: 
+            [{
+                binding: 0, // transformation matrix
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'storage'},
+            }],
+        });
+        this.computeBindGroup = this.device.createBindGroup
+        ({
+            label: `Compute BindGroup`,
+            layout: this.computeBindGroupLayout,
+            entries: 
+            [{
+                binding: 0, // transformation matrix
+                resource: { buffer: this.computeBuffer },
+            }],
+        });
+    }
     async loadGPUBuffers()
     {
         // TODO:: Create instanced bind group
@@ -311,6 +371,16 @@ export default class GltfRenderer
             });
         }
         return this.fragShaderModule;
+    }
+    getComputeShaderModule() {
+        if (!this.compShaderModule)
+        {
+            this.compShaderModule = this.device.createShaderModule({
+                label: 'glTF compute shader module',
+                code : compShaderCode
+            });
+        }
+        return this.compShaderModule;
     }
 
     setupMeshNodeBindGroup(node : GLTFSpace.Node)
@@ -456,7 +526,21 @@ export default class GltfRenderer
         };
 
         this.commandEncoder = this.device.createCommandEncoder();
+        let transformationMatrixData  =  new Float32Array (this.gltf_group.transforms[0]).buffer;
+        console.log("before: ");
+        console.log(this.gltf_group.transforms[0]);
+        this.device.queue.writeBuffer(this.computeBuffer, 0, transformationMatrixData);
 
+        //compute shader first
+        this.computepassEncoder = this.commandEncoder.beginComputePass();
+        this.computepassEncoder.setPipeline(this.computePipeline);
+        this.computepassEncoder.setBindGroup(0, this.computeBindGroup);
+        this.computepassEncoder.dispatchWorkgroups(1);
+
+       
+        this.computepassEncoder.end();
+        console.log("after: ");
+        console.log(this.gltf_group.transforms[0]);
         // Render pass
         this.passEncoder = this.commandEncoder.beginRenderPass(renderPassDesc);
 

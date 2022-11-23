@@ -53,11 +53,12 @@ export default class Application
             // Butterfly
             let s : number = 0.01;
             this.gltf_butterfly = new GLTFGroup();
-            await this.gltf_butterfly.init(
-                'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/butterfly/butterfly.gltf',
-                3,
-                ["b1", "b2", "b3"],
-                [[s,0,0,0,  0,s,0,0,  0,0,s,0,  3,0,0,1], [s,0,0,0,  0,s,0,0,  0,0,s,0,  -3,0,0,1], [s,0,0,0,  0,s,0,0,  0,0,s,0,  0,4.5,0,1]]);
+            // await this.gltf_butterfly.init(
+            //     'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/butterfly/butterfly.gltf',
+            //     3,
+            //     ["b1", "b2", "b3"],
+            //     [[s,0,0,0,  0,s,0,0,  0,0,s,0,  3,0,0,1], [s,0,0,0,  0,s,0,0,  0,0,s,0,  -3,0,0,1], [s,0,0,0,  0,s,0,0,  0,0,s,0,  0,4.5,0,1]]);
+            await this.gltf_butterfly.init('https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/butterfly/butterfly.gltf',1, ["b1"],[[s,0,0,0,  0,s,0,0,  0,0,s,0,  0,4.5,0,1] ]);
             this.renderer_butterfly = new GltfRenderer();
             await this.renderer_butterfly.init(this.adapter, this.device, this.queue, this.canvas, this.gltf_butterfly);
 

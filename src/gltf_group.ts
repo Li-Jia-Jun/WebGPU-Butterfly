@@ -45,7 +45,9 @@ export default class GLTFGroup
         // Calculate matrix for each node locally
         // since gltf alone does not give this info directly
         this.nodeMatrics = new Map<GLTFSpace.Node, mat4>();
-        const defaultTransform : mat4 = [1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1];
+        //const defaultTransform : mat4 = [1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1];
+
+        let defaultTransform = mat4.identity(mat4.create());
         for(const node of this.gltf.nodes)
         {
             this.#calcNodeMatrix(node, defaultTransform);
