@@ -6,14 +6,31 @@
     time : f32,
 };
 
-@group(0) @binding(0) var<uniform> camera : Camera;
-@group(1) @binding(0) var<uniform> modelMatrix : mat4x4<f32>;
-@group(2) @binding(0) var<storage> instanceMatrics : array<mat4x4<f32>>;
+
+// Constant BindGroup
+@group(0) @binding(0) var<uniform> jointInfo: vec4<f32>;                    // [0] is jointNum, rest is unused yet
+@group(0) @binding(1) var<storage> inverseBindMatrics: array<mat4x4<f32>>;  // size = jointNum
+
+// Frame BindGroup
+@group(1) @binding(0) var<uniform> camera : Camera;
+@group(1) @binding(1) var<storage> instanceMatrics : array<mat4x4<f32>>;
+@group(1) @binding(2) var<storage> jointTransforms: array<mat4x4<f32>>;     // size = jointNum * instanceNum
+
+// Node BindGroup
+@group(2) @binding(0) var<uniform> modelMatrix : mat4x4<f32>; // Node matrix in GLTF (local position)
+
+
 
 struct VertexInput 
 {
     @location(0) position : vec3<f32>,
     @location(1) normal : vec3<f32>,
+
+    //@location(2) texcoord : vec2<f32>,
+
+    // Joints
+    @location(2) joints: vec4<u32>,
+    @location(3) jointweights: vec4<f32>
 };
 
 struct VertexOutput 
@@ -22,22 +39,37 @@ struct VertexOutput
     @location(0) normal : vec3<f32>,
 };
 
+
 @vertex
 fn vertexMain(input : VertexInput, @builtin(instance_index) instance : u32) -> VertexOutput
 {
     var output : VertexOutput;
-    var model = instanceMatrics[instance] * modelMatrix;
-    output.position = camera.projection * camera.view * model * vec4(input.position, 1.0);
-    output.normal = normalize((camera.view * model * vec4(input.normal, 0.0)).xyz);
-    return output;
-}
 
-// @vertex
-// fn vertexMain(input : VertexInput, @buildin(instance_index)) -> VertexOutput
-// {
-//     var output : VertexOutput;
-//     output.position = camera.projection * camera.view * modelMatrices[instance_index] * vec4(input.position, 1.0);
-//     output.normal = normalize((camera.view * modelMatrices[instance_index] * vec4(input.normal, 0.0)).xyz);
-//     return output;
-// }
+    var modelPos = modelMatrix * vec4(input.position, 1.0);
+
+    var hasJoint = bool(jointInfo[0]);
+    if(hasJoint)
+    {
+        var jointNum = u32(jointInfo[1]);
+        var jointMatrix = input.jointweights[0] * jointTransforms[jointNum * instance + input.joints[0]] * inverseBindMatrics[input.joints[0]];
+        jointMatrix += input.jointweights[1] * jointTransforms[jointNum * instance + input.joints[1]] * inverseBindMatrics[input.joints[1]];
+        jointMatrix += input.jointweights[2] * jointTransforms[jointNum * instance + input.joints[2]] * inverseBindMatrics[input.joints[2]];
+        jointMatrix += input.jointweights[3] * jointTransforms[jointNum * instance + input.joints[3]] * inverseBindMatrics[input.joints[3]];
+
+        // Skinned mesh vertex will only affected by joints so 'modelMatrix' is removed here
+        modelPos = jointMatrix * vec4(input.position, 1.0);
+
+        var worldPos = instanceMatrics[instance] * modelPos;
+        output.position = camera.projection * camera.view * worldPos;
+        output.normal = normalize((camera.view * instanceMatrics[instance] * jointMatrix * vec4(input.normal, 0.0)).xyz);
+        return output;
+    }
+    else
+    {
+        var worldPos = instanceMatrics[instance] * modelPos;
+        output.position = camera.projection * camera.view * worldPos;
+        output.normal = normalize((camera.view * instanceMatrics[instance] * modelMatrix * vec4(input.normal, 0.0)).xyz);
+        return output;
+    }
+}
 

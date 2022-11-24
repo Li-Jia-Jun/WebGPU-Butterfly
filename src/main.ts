@@ -51,13 +51,41 @@ export default class Application
             this.camera.distance = 10;
 
             // Butterfly
-            let s : number = 0.01;
+            // let s : number = 0.01;
+            // this.gltf_butterfly = new GLTFGroup();
+            // await this.gltf_butterfly.init(
+            //     'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/butterfly/butterfly.gltf',
+            //     3,
+            //     ["b1", "b2", "b3"],
+            //     [[s,0,0,0,  0,s,0,0,  0,0,s,0,  3,0,0,1], [s,0,0,0,  0,s,0,0,  0,0,s,0,  -3,0,0,1], [s,0,0,0,  0,s,0,0,  0,0,s,0,  0,4.5,0,1]]);
+
+            // Rigged Buffterfly
+            let s : number = 1.5;
             this.gltf_butterfly = new GLTFGroup();
             await this.gltf_butterfly.init(
-                'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/butterfly/butterfly.gltf',
-                3,
-                ["b1", "b2", "b3"],
-                [[s,0,0,0,  0,s,0,0,  0,0,s,0,  3,0,0,1], [s,0,0,0,  0,s,0,0,  0,0,s,0,  -3,0,0,1], [s,0,0,0,  0,s,0,0,  0,0,s,0,  0,4.5,0,1]]);
+                'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-done.gltf',
+                2,
+                ["b1", "b2"],
+                [[s,0,0,0,  0,s,0,0,  0,0,s,0,  4,0,0,1], [s,0,0,0,  0,s,0,0,  0,0,s,0,  -4,0,0,1]]);
+
+            // Rigged Cylinder
+            // let s : number = 1.0;
+            // this.gltf_butterfly = new GLTFGroup();
+            // await this.gltf_butterfly.init(
+            //     'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedSimple/glTF/RiggedSimple.gltf',
+            //     1,
+            //     ["b1"],
+            //     [[s,0,0,0,  0,s,0,0,  0,0,s,0,  0,0,0,1]]);
+
+            // Rigged Figure
+            // let s : number = 3.0;
+            // this.gltf_butterfly = new GLTFGroup();
+            // await this.gltf_butterfly.init(
+            //     'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedFigure/glTF/RiggedFigure.gltf',
+            //     1,
+            //     ["b1"],
+            //     [[s,0,0,0,  0,s,0,0,  0,0,s,0,  0,0,0,1]]);
+                
             this.renderer_butterfly = new GltfRenderer();
             await this.renderer_butterfly.init(this.adapter, this.device, this.queue, this.canvas, this.gltf_butterfly);
 
@@ -97,11 +125,14 @@ export default class Application
 
     updateFrame()
     {
-        // Update renderer
+        // Update Camera
         let projMat = mat4.create();
         const aspect = this.canvas.width / this.canvas.height;
         mat4.perspective(projMat, this.fov, aspect, this.zNear, this.zFar);
-        this.renderer_butterfly.updateFrameBuffer(projMat, this.camera.viewMatrix, this.camera.position, 0);    
+        this.renderer_butterfly.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, 0);    
+
+        // Update Instance
+        
 
         this.updateDisplay();
     }

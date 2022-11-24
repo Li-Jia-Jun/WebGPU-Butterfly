@@ -3,16 +3,19 @@ import vertShaderCode from './shaders/gltf.vert.wgsl';
 import fragShaderCode from './shaders/gltf.frag.wgsl';
 
 import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
-import {mat4, vec3} from 'gl-matrix';
+import {mat4, vec3, vec4} from 'gl-matrix';
 import GLTFGroup from './gltf_group';
 
 
 // Make sure the shaders follow this mapping
-const ShaderLocations = 
-{
-    POSITION: 0,
-    NORMAL: 1,
-};
+const ShaderLocations : Map<string, number> = new Map
+([
+    ['POSITION', 0],
+    ['NORMAL', 1],
+    // TEXCOORD_0: 2,
+    ['JOINTS_0', 2],
+    ['WEIGHTS_0', 3]
+]);
 
 // Store Primitive GPUBuffer
 class GPUPrimitiveBufferInfo
@@ -37,8 +40,7 @@ export default class GltfRenderer
 {
     static loadImageSlots = [];
 
-    // Associates a glTF node or primitive with its WebGPU resources.
-    nodeGpuData : Map<GLTFSpace.Node, GPUBindGroup>;
+    // Associates a glTF node or primitive with its WebGPU resources
     primitiveGpuData : Map<GLTFSpace.MeshPrimitive, GPUPrimitiveInfo>;
     gpuBuffers : GPUBuffer[];
    
@@ -50,17 +52,23 @@ export default class GltfRenderer
     device : GPUDevice;
     queue: GPUQueue;
 
-    // Bind group
+    // Frame Bind Group
     static readonly FRAMEBUFFERSIZE : number = Float32Array.BYTES_PER_ELEMENT * 36; // 16+16+3+1
-    frameUniformBuffer : GPUBuffer;
+    cameraBuffer : GPUBuffer;
+    instanceBuffer : GPUBuffer; // Inverse Bind Matrix
+    jointTransformBuffer : GPUBuffer;
     frameBindGroupLayout : GPUBindGroupLayout;
     frameBindGroup : GPUBindGroup;
 
+    // Node Bind Group
     nodeBindGroupLayout : GPUBindGroupLayout;
+    nodeGpuData : Map<GLTFSpace.Node, GPUBindGroup>;
 
-    instanceBuffer : GPUBuffer;
-    instanceBindGroupLayout : GPUBindGroupLayout;
-    instanceBindGroup : GPUBindGroup;
+    // Constant Bind Group
+    jointInfoBuffer : GPUBuffer;
+    inverseBindMatrixBuffer : GPUBuffer;
+    constantBindGroupLayout: GPUBindGroupLayout;
+    constantBindGroup : GPUBindGroup;
 
     // Pipeline
     gltfPipelineLayout : GPUPipelineLayout;
@@ -79,7 +87,6 @@ export default class GltfRenderer
 
     // Web stuff
     canvas : HTMLCanvasElement;
-
 
     constructor(){}
 
@@ -136,18 +143,18 @@ export default class GltfRenderer
         await this.loadGPUBuffers();
 
         // Bind Groups
+        this.initConstantBindGroup();
         this.initFrameBindGroup();
         this.initNodeBindGroup();
-        this.initInstanceBindGroup();
 
         // Pipeline Layout
         this.gltfPipelineLayout = this.device.createPipelineLayout
         ({
             label: 'glTF Pipeline Layout',
             bindGroupLayouts: [
+                this.constantBindGroupLayout,
                 this.frameBindGroupLayout,
                 this.nodeBindGroupLayout,
-                this.instanceBindGroupLayout,
         ]});
 
         // Loop through each primitive of each mesh and create a compatible WebGPU pipeline.
@@ -162,20 +169,86 @@ export default class GltfRenderer
 
     initFrameBindGroup()
     {
-        // Bind group layout for frame
-        this.frameUniformBuffer = this.device.createBuffer
+        // Camera
+        this.cameraBuffer = this.device.createBuffer
         ({
             size: GltfRenderer.FRAMEBUFFERSIZE * Float32Array.BYTES_PER_ELEMENT,   // proj mat, view mat, pos, time
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
+
+        // Instance Matrices
+        const instanceNum = this.gltf_group.instanceCount;
+        this.instanceBuffer = this.device.createBuffer
+        ({
+            size: 16 * instanceNum * Float32Array.BYTES_PER_ELEMENT,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+        this.updateInstanceBuffer();
+
+        // Joint Transforms
+        const hasJoint = this.gltf_group.gltf.skins !== undefined;
+        if(hasJoint)
+        {
+            const jointNum = this.gltf_group.gltf.skins[0].joints.length;
+            this.jointTransformBuffer = this.device.createBuffer
+            ({
+                size: 16 * jointNum * instanceNum * Float32Array.BYTES_PER_ELEMENT,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+            });          
+
+            // Init joint transform buffer with node matrix to represent default pose
+            let jointTransformArrayBuffer = new ArrayBuffer(16 * jointNum * Float32Array.BYTES_PER_ELEMENT);
+            for(let [index, joint] of this.gltf_group.gltf.skins[0].joints.entries())
+            {
+                let node : GLTFSpace.Node = this.gltf_group.gltf.nodes[joint];
+                let mat : mat4 = this.gltf_group.nodeMatrics.get(node);
+
+                // Temp test rigging: Add (0, 1, 0) world offset for joint 1 
+                // if(index == 1)
+                // {
+                //     mat = mat4.fromValues(mat[0], mat[1], mat[2], mat[3],
+                //         mat[4], mat[5], mat[6], mat[7],
+                //         mat[8], mat[9], mat[10], mat[11],
+                //         mat[12], mat[13] + 0.5, mat[14], mat[15]);
+                // }
+
+                let st = index * 16 * Float32Array.BYTES_PER_ELEMENT;
+                let arr = new Float32Array(jointTransformArrayBuffer, st, 16);
+                arr.set(mat);
+            }  
+            for(let i = 0; i < instanceNum; i++)
+            {
+                this.device.queue.writeBuffer(this.jointTransformBuffer, i * 16 * jointNum * Float32Array.BYTES_PER_ELEMENT, jointTransformArrayBuffer);
+            }
+        }
+        else
+        {
+            // Create empty buffer
+            this.jointTransformBuffer = this.device.createBuffer
+            ({
+                size: 4 * Float32Array.BYTES_PER_ELEMENT,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+            });
+        }
+
         this.frameBindGroupLayout = this.device.createBindGroupLayout
         ({
             label: `Frame BindGroupLayout`,
             entries: 
             [{
-                binding: 0, // Camera/Frame uniforms
+                binding: 0, // Camera uniforms
                 visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-                buffer: {},
+                buffer: { type: 'uniform'},
+            },
+            {
+                binding: 1, // Instance matrices
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {type: 'read-only-storage'}
+            },
+            {
+                binding: 2, // Joint Transforms
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {type: 'read-only-storage'}
             }],
         });
         this.frameBindGroup = this.device.createBindGroup
@@ -185,7 +258,15 @@ export default class GltfRenderer
             entries: 
             [{
                 binding: 0, // Camera uniforms
-                resource: { buffer: this.frameUniformBuffer },
+                resource: { buffer: this.cameraBuffer }
+            },
+            {
+                binding: 1,
+                resource: { buffer: this.instanceBuffer}
+            },
+            {
+                binding: 2,
+                resource: { buffer: this.jointTransformBuffer}
             }],
         });
     }
@@ -212,41 +293,76 @@ export default class GltfRenderer
         }
     }
 
-    initInstanceBindGroup()
+    initConstantBindGroup()
     {
-        this.instanceBuffer = this.device.createBuffer
+        const hasJoint = this.gltf_group.gltf.skins !== undefined ? 1 : 0;
+        const jointNum = hasJoint ? this.gltf_group.gltf.skins[0].joints.length : 0;
+        
+        // Joint Info Buffer
+        this.jointInfoBuffer = this.device.createBuffer
         ({
-            size: 16 * this.gltf_group.instanceCount * Float32Array.BYTES_PER_ELEMENT,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-        });
-        this.instanceBindGroupLayout = this.device.createBindGroupLayout
+            size: 4 * Float32Array.BYTES_PER_ELEMENT,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        }); 
+
+        let jointInfoArrayBuffer = new ArrayBuffer(4 * Float32Array.BYTES_PER_ELEMENT);
+        let jointInfoArray = new Float32Array(jointInfoArrayBuffer, 0, 4);
+        jointInfoArray.set(vec4.fromValues(hasJoint, jointNum, 0, 0));
+        this.device.queue.writeBuffer(this.jointInfoBuffer, 0, jointInfoArrayBuffer);
+
+        // Inverse Bind Matrices
+        if(hasJoint)
+        {
+            const accessor : number = this.gltf_group.gltf.skins[0].inverseBindMatrices;
+            const bufferView : number = this.gltf_group.gltf.accessors[accessor].bufferView;
+            this.inverseBindMatrixBuffer = this.gpuBuffers[bufferView];
+        }
+        else
+        {
+            // If not joints in this gltf, then create an empty buffer
+            this.inverseBindMatrixBuffer = this.device.createBuffer
+            ({            
+                size: 4 * Float32Array.BYTES_PER_ELEMENT,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+            });
+        }
+
+        this.constantBindGroupLayout = this.device.createBindGroupLayout
         ({
-            label: `glTF Instance BindGroupLayout`,
-            entries: [{
-                binding: 0,
-                visibility: GPUShaderStage.VERTEX,
-                buffer: {type: 'read-only-storage'},
-            }]
-        });
-        this.instanceBindGroup = this.device.createBindGroup
-        ({
-            label: `Instance BindGroup`,
-            layout: this.instanceBindGroupLayout,
-            entries: 
+            label: `Constant BindGroupLayout`,
+            entries:
             [{
                 binding: 0,
-                resource: { buffer: this.instanceBuffer },
-            }],
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {type: 'uniform'}
+            },
+            {
+                binding: 1,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {type: 'read-only-storage'}
+            }]
+        });
+        this.constantBindGroup = this.device.createBindGroup
+        ({
+            label: `Constant BindGroup`,
+            layout: this.constantBindGroupLayout,
+            entries:
+            [{
+                binding: 0,
+                resource: {buffer: this.jointInfoBuffer}
+            },
+            {
+                binding: 1,
+                resource: {buffer: this.inverseBindMatrixBuffer}
+            }]
         });
     }
 
     async loadGPUBuffers()
-    {
-        // TODO:: Create instanced bind group
-        
+    {     
         // Mark GPUBufferUsage by accessor for each bufferview 
         // since in many cases bufferviews do not have 'target' property
-        const bufferViewUsages = [];
+        const bufferViewUsages : Map<number, number> = new Map();
         for (const mesh of this.gltf_group.gltf.meshes) 
         {
             for (const primitive of mesh.primitives) 
@@ -254,38 +370,65 @@ export default class GltfRenderer
                 if (primitive.indices !== undefined) 
                 {
                     const accessor = this.gltf_group.gltf.accessors[primitive.indices];
-                    bufferViewUsages[accessor.bufferView] |= GPUBufferUsage.INDEX;
+                    bufferViewUsages.set(accessor.bufferView, GPUBufferUsage.INDEX);
+                    bufferViewUsages[accessor.bufferView] = GPUBufferUsage.INDEX;
                 }
                 for (const attribute of Object.values(primitive.attributes))
                 {
                     const accessor = this.gltf_group.gltf.accessors[attribute];
-                    bufferViewUsages[accessor.bufferView] |= GPUBufferUsage.VERTEX;
+                    bufferViewUsages.set(accessor.bufferView, GPUBufferUsage.VERTEX);
+                    bufferViewUsages[accessor.bufferView] = GPUBufferUsage.VERTEX;
                 }
             }
         }
 
-        // Create GPUBuffer for each bufferview    
+        // Some bufferviews are not referenced by accessors in the meshes
+        const hasJoint = this.gltf_group.gltf.skins !== undefined;
+        let inverseMatrixBufferView = -1;
+        if(hasJoint)
+        {
+            const accesor = this.gltf_group.gltf.skins[0].inverseBindMatrices;
+            const bufferView = this.gltf_group.gltf.accessors[accesor].bufferView;
+            bufferViewUsages.set(bufferView, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST);
+            bufferViewUsages[bufferView] = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;      
+            //console.log("mark joint inverseBindmatrices bufferview: " + bufferView + ", usage = " + bufferViewUsages[bufferView]);
+            inverseMatrixBufferView = bufferView;
+        }
+        
+        // Create GPUBuffer for each bufferview (TODO:: reduce duplicate bufferview)    
         this.gpuBuffers = [];
         for(let i = 0; i < this.gltf_group.gltf.bufferViews.length; i++)
         {  
-            const bufferView = this.gltf_group.gltf.bufferViews[i];
-            const gpuBuffer = this.device.createBuffer
-            ({
-                label: bufferView.name,
-                size: Math.ceil(bufferView.byteLength / 4) * 4, // Round up to multiple of 4
-                usage: bufferViewUsages[i],
-                mappedAtCreation: true,
-            });
+            if(bufferViewUsages.has(i))
+            {
+                const bufferView = this.gltf_group.gltf.bufferViews[i];
+                const gpuBuffer = this.device.createBuffer
+                ({
+                    label: bufferView.name,
+                    size: Math.ceil(bufferView.byteLength / 4) * 4, // Round up to multiple of 4
+                    usage: bufferViewUsages[i],
+                    mappedAtCreation: true,
+                });
+    
+                let gpuBufferArray = new Uint8Array(gpuBuffer.getMappedRange());
+                let wholeArray = new Uint8Array(10);
+                await this.gltf_group.asset.bufferData.get(0).then((value) => {wholeArray = value;}); // Load buffer data from gltf
 
-            let gpuBufferArray = new Uint8Array(gpuBuffer.getMappedRange());
-            let wholeArray = new Uint8Array(10);
-            await this.gltf_group.asset.bufferData.get(0).then((value) => {wholeArray = value;}); // Load buffer data from gltf
-
-            let subArray = wholeArray.subarray(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
-            gpuBufferArray.set(subArray);
-            gpuBuffer.unmap();
-            this.gpuBuffers.push(gpuBuffer);
-            //console.log("i = " + i + ", byteLength = " + bufferView.byteLength + ", byteOffset = " + bufferView.byteOffset + ", actual buffer = " + subArray);       
+                let subArray = wholeArray.subarray(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
+                gpuBufferArray.set(subArray);
+                gpuBuffer.unmap();
+                this.gpuBuffers.push(gpuBuffer);
+            }
+            else
+            {
+                // For those not yet supported usages, create empty gpu buffer
+                this.gpuBuffers.push(this.device.createBuffer
+                ({
+                    label: 'empty buffer',
+                    size: 4,
+                    usage: GPUBufferUsage.COPY_DST
+                }));
+            }
         }    
     }
 
@@ -347,6 +490,55 @@ export default class GltfRenderer
         const primitiveGpuBuffers : GPUPrimitiveBufferInfo[] = [];
         let drawCount = 0;
 
+        // Explicit create GPUBuffer for each vertex shader attributes
+        for(const [atrrNameInShader, location] of ShaderLocations)
+        {
+            // First check if the attribute required in shader can be found in GLTF
+            let createdFromGLTF : boolean = false;
+            for (const [attribName, accessorIndex] of Object.entries(primitive.attributes)) 
+            {
+                if(attribName != atrrNameInShader)
+                {
+                    continue;
+                }
+
+                createdFromGLTF = true;
+
+                const accessor = this.gltf_group.gltf.accessors[accessorIndex];
+                const bufferView = this.gltf_group.gltf.bufferViews[accessor.bufferView];
+                
+                // console.log("build vertex buffer layout for: " + attribName);
+
+                // Create a new vertex buffer entry for the render pipeline that describes this
+                // attribute. Implicitly assumes that one buffer will be bound per attribute, even if
+                // the attribute data is interleaved.
+                bufferLayout.push({
+                    arrayStride: bufferView.byteStride || GLTFUtil.packedArrayStrideForAccessor(accessor),
+                    attributes : [{                
+                        format: GLTFUtil.gpuFormatForAccessor(accessor) as GPUVertexFormat,
+                        offset: 0,  // Explicitly set to zero now.
+                        shaderLocation: location}]
+                });
+
+                // Since we're skipping some attributes, we need to track the WebGPU buffers that are
+                // used here so that we can bind them in the correct order at draw time.
+                primitiveGpuBuffers.push({
+                    buffer: this.gpuBuffers[accessor.bufferView],
+                    offset: accessor.byteOffset});  // Save the attribute offset as a buffer offset instead.
+
+                drawCount = accessor.count;
+
+                break;
+            }
+
+            // If GLTF does not provide this attribute, we still need to create a vertex buffer since it is required by shader
+            if(!createdFromGLTF)
+            {
+                // TODO:: create default vertex buffer
+            }
+        }
+
+
         // Get GPUBuffer for each accessor inside the primitive
         for (const [attribName, accessorIndex] of Object.entries(primitive.attributes)) 
         {
@@ -357,6 +549,8 @@ export default class GltfRenderer
             // attribute because we don't need it for rendering (yet).
             const shaderLocation = ShaderLocations[attribName];
             if (shaderLocation === undefined) { continue; }
+
+            //console.log("build vertex buffer layout for: " + attribName);
 
             // Create a new vertex buffer entry for the render pipeline that describes this
             // attribute. Implicitly assumes that one buffer will be bound per attribute, even if
@@ -460,13 +654,13 @@ export default class GltfRenderer
         // Render pass
         this.passEncoder = this.commandEncoder.beginRenderPass(renderPassDesc);
 
-        this.passEncoder.setBindGroup(0, this.frameBindGroup);
-        this.passEncoder.setBindGroup(2, this.instanceBindGroup);
+        this.passEncoder.setBindGroup(0, this.constantBindGroup);
+        this.passEncoder.setBindGroup(1, this.frameBindGroup);
 
         // Bind gltf data to render pass
         for (const [node, bindGroup] of this.nodeGpuData)
         {
-            this.passEncoder.setBindGroup(1, bindGroup);
+            this.passEncoder.setBindGroup(2, bindGroup);
 
             const mesh = this.gltf_group.gltf.meshes[node.mesh];
             for (const primitive of mesh.primitives)
@@ -484,11 +678,11 @@ export default class GltfRenderer
                 if(gpuPrimitive.indexBuffer !== undefined)
                 {                  
                     this.passEncoder.setIndexBuffer(gpuPrimitive.indexBuffer, gpuPrimitive.indexType, gpuPrimitive.indexOffset);
-                    this.passEncoder.drawIndexed(gpuPrimitive.drawCount, this.gltf_group.instanceCount);
+                    this.passEncoder.drawIndexed(gpuPrimitive.drawCount, this.gltf_group.instanceCount, 0, 0, 0);
                 }
                 else
                 {
-                    this.passEncoder.draw(gpuPrimitive.drawCount, this.gltf_group.instanceCount);
+                    this.passEncoder.draw(gpuPrimitive.drawCount, this.gltf_group.instanceCount, 0, 0);
                 }
             }
         }
@@ -517,7 +711,7 @@ export default class GltfRenderer
         requestAnimationFrame(this.renderGLTF);     
     }
 
-    updateFrameBuffer(projMat : mat4, viewMat : mat4, pos : vec3, time : number)
+    updateCameraBuffer(projMat : mat4, viewMat : mat4, pos : vec3, time : number)
     {  
         // Update frame buffer
         let frameArrayBuffer = new ArrayBuffer(GltfRenderer.FRAMEBUFFERSIZE);
@@ -531,7 +725,7 @@ export default class GltfRenderer
         cameraPosition.set(pos);
         timeArray.set([time]);
 
-        this.device.queue.writeBuffer(this.frameUniformBuffer, 0, frameArrayBuffer);
+        this.device.queue.writeBuffer(this.cameraBuffer, 0, frameArrayBuffer);
     }
 
     updateInstanceBuffer()
@@ -545,6 +739,11 @@ export default class GltfRenderer
         }
 
         this.device.queue.writeBuffer(this.instanceBuffer, 0, instanceArrayBuffer);
+    }
+
+    updateJointTransformBuffer()
+    {
+        
     }
 }
 

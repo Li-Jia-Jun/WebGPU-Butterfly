@@ -23,11 +23,6 @@ export default class GLTFGroup
 
     async init(uri : string, instanceCount : number = 1, names : string[] = [""], transforms : mat4[] = [[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]])
     { 
-        // Example source:
-        // this.uri = 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/butterfly/butterfly.gltf';
-        // this.uri = 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf/models/BoxTextured/glTF/BoxTextured.gltf';
-        // this.uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoomBox/glTF/BoomBox.gltf';
-        // this.uri = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF/WaterBottle.gltf';
         this.uri = uri;
 
         this.transforms = transforms;
@@ -45,37 +40,58 @@ export default class GLTFGroup
         // Calculate matrix for each node locally
         // since gltf alone does not give this info directly
         this.nodeMatrics = new Map<GLTFSpace.Node, mat4>();
-        const defaultTransform : mat4 = [1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1];
-        for(const node of this.gltf.nodes)
+
+        // Force set root to identity matrix
+        //this.nodeMatrics.set(this.gltf.nodes[0], mat4.fromValues(1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1));
+
+        const defaultTransform : mat4 = mat4.fromValues(1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1);
+        for(const [index, node] of this.gltf.nodes.entries())
         {
-            this.#calcNodeMatrix(node, defaultTransform);
-        }     
+            this.#calcNodeMatrix(index, node, defaultTransform, false);
+        }
     }
 
-    #calcNodeMatrix(node : GLTFSpace.Node, parentMat : mat4)
+    #calcNodeMatrix(index : number, node : GLTFSpace.Node, parentMat : mat4, parentUpdate : boolean)
     {
-        if(this.nodeMatrics.has(node))
+        const notNeedToUpdate = parentUpdate == false && this.nodeMatrics.has(node);
+        const onlyUpdateParent = parentUpdate == true && this.nodeMatrics.has(node);
+
+        if(notNeedToUpdate)
+        {
             return;
-        
-        // Read Node matrix from gltf
+        }
+
+        // Read Node matrix from gltf or this.nodeMatrics
         let nodeMat : mat4 = this.#getNodeMatrix(node);
 
         // Accumulate it with parent matrix
-        mat4.mul(nodeMat, nodeMat, parentMat); 
+        mat4.mul(nodeMat, parentMat, nodeMat);
+
         this.nodeMatrics.set(node, nodeMat);
         
         if(node.children !== undefined)
         {
             for(const child of node.children)
             {
-                this.#calcNodeMatrix(this.gltf.nodes[child], nodeMat);
+                if(onlyUpdateParent)
+                {
+                    this.#calcNodeMatrix(child, this.gltf.nodes[child], parentMat, true);
+                }
+                else
+                {
+                    this.#calcNodeMatrix(child, this.gltf.nodes[child], nodeMat, true);
+                }
             }
         }
     }
 
     #getNodeMatrix(node : GLTFSpace.Node) : mat4
     {
-        if(node.matrix !== undefined)
+        if(this.nodeMatrics.has(node))
+        {
+            return this.nodeMatrics.get(node);
+        }
+        else if(node.matrix !== undefined)
         {
             let mat : number[] = node.matrix;
             return mat4.fromValues(            
@@ -109,5 +125,27 @@ export default class GLTFGroup
             // Default transform for the node
             return mat4.fromValues(1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1);
         }
+    }
+
+    // For debugging
+    #printNodeMatrix(index : number)
+    {
+        let node = this.gltf.nodes[index];
+        let nodeMat = this.nodeMatrics.get(node);
+
+        //console.log("node " + index +" [" + node.name + "] mat = " + nodeMat);
+
+        let trans = vec3.create();
+        mat4.getTranslation(trans, nodeMat);
+        console.log("node " + index +" [" + node.name + "] trans = " + trans);
+
+        let rot = quat.create();
+        let angle = vec3.create();
+        mat4.getRotation(rot, nodeMat);
+        console.log("node " + index+ " [" + node.name + "] quat rot = " + rot);
+
+        let scale = vec3.create();
+        mat4.getScaling(scale, nodeMat);
+        console.log("node " + index + " [" + node.name + "] scale = " + scale);
     }
 };
