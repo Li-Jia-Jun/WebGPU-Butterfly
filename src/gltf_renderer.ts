@@ -296,7 +296,7 @@ export default class GltfRenderer
             entries: 
             [{
                 binding: 0, // transformation matrix
-                resource: { buffer: this.computeBuffer },
+                resource: { buffer: this.instanceBuffer },
             }],
         });
     }
@@ -526,10 +526,17 @@ export default class GltfRenderer
         };
 
         this.commandEncoder = this.device.createCommandEncoder();
+        
+        
         let transformationMatrixData  =  new Float32Array (this.gltf_group.transforms[0]).buffer;
-        console.log("before: ");
-        console.log(this.gltf_group.transforms[0]);
+
+       
         this.device.queue.writeBuffer(this.computeBuffer, 0, transformationMatrixData);
+
+        // console.log("before: ");
+        // let tmpBufferArray = new Uint8Array(this.computeBuffer.getMappedRange());
+        // console.log(tmpBufferArray);
+        // this.instanceBuffer
 
         //compute shader first
         this.computepassEncoder = this.commandEncoder.beginComputePass();
@@ -540,7 +547,8 @@ export default class GltfRenderer
        
         this.computepassEncoder.end();
         console.log("after: ");
-        console.log(this.gltf_group.transforms[0]);
+        // let tmpBufferArray = new Uint8Array(this.computeBuffer.getMappedRange());
+        // console.log(tmpBufferArray);
         // Render pass
         this.passEncoder = this.commandEncoder.beginRenderPass(renderPassDesc);
 
