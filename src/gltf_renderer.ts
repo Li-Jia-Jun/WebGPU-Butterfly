@@ -88,54 +88,36 @@ export default class GltfRenderer
     // Web stuff
     canvas : HTMLCanvasElement;
 
+    isFirstRenderer : boolean;
+
+
     constructor(){}
 
-    async init(adapter : GPUAdapter, device : GPUDevice, queue : GPUQueue, canvas : HTMLCanvasElement, gltf_group : GLTFGroup)
+    async init(adapter : GPUAdapter, device : GPUDevice, queue : GPUQueue, canvas : HTMLCanvasElement, context : GPUCanvasContext,
+        gltf_group : GLTFGroup, depthTexture : GPUTexture, depthTextureView : GPUTextureView, isFirstRenderer : boolean = false)
     {     
         this.adapter = adapter;
         this.device = device;
         this.queue = queue;
 
+        this.canvas = canvas;
+
+        this.context = context; 
+
         this.gltf_group = gltf_group;
 
-        this.canvas = canvas;
+        this.depthTexture = depthTexture;
+        this.depthTextureView = depthTextureView;
+
+        this.isFirstRenderer = isFirstRenderer;
 
         this.nodeGpuData = new Map();
         this.primitiveGpuData = new Map();
 
-        this.resizeBackings();
+        //this.resizeBackings();
         await this.initializeWebGPUAndGLTF(); 
     }
 
-    resizeBackings() 
-    {
-        // Swapchain
-        if (!this.context) 
-        {
-            this.context = this.canvas.getContext('webgpu');
-            const canvasConfig: GPUCanvasConfiguration = 
-            {
-                device: this.device,
-                format: 'bgra8unorm',
-                usage:
-                    GPUTextureUsage.RENDER_ATTACHMENT |
-                    GPUTextureUsage.COPY_SRC,
-                    alphaMode: 'opaque'
-            };
-            this.context.configure(canvasConfig);
-        }
-
-        const depthTextureDesc: GPUTextureDescriptor = 
-        {
-            size: [this.canvas.width, this.canvas.height, 1],
-            dimension: '2d',
-            format: 'depth24plus-stencil8',
-            usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
-        };
-
-        this.depthTexture = this.device.createTexture(depthTextureDesc);
-        this.depthTextureView = this.depthTexture.createView();
-    }
 
     async initializeWebGPUAndGLTF()
     {
@@ -629,22 +611,24 @@ export default class GltfRenderer
         this.colorTextureView = this.colorTexture.createView();
 
         // Command Encoder
+        const loadOp = this.isFirstRenderer ? 'clear' : 'load';
         let colorAttachment: GPURenderPassColorAttachment = {
             view: this.colorTextureView,
             clearValue: { r: 135 / 255.0, g: 206 / 255.0, b: 250 / 255.0, a: 1 },   // Blue background
-            loadOp: 'clear',
+            loadOp: loadOp,
             storeOp: 'store'
         };
         const depthAttachment: GPURenderPassDepthStencilAttachment = {
             view: this.depthTextureView,
             depthClearValue: 1,
-            depthLoadOp: 'clear',
+            depthLoadOp: loadOp, //'clear'
             depthStoreOp: 'store',
             stencilClearValue: 0,
-            stencilLoadOp: 'clear',
+            stencilLoadOp: loadOp, // 'clear'
             stencilStoreOp: 'store'
         };
-        const renderPassDesc: GPURenderPassDescriptor = {
+
+        let renderPassDesc: GPURenderPassDescriptor = {
             colorAttachments: [colorAttachment],
             depthStencilAttachment: depthAttachment
         };
