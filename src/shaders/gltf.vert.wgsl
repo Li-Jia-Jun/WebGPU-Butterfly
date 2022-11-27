@@ -8,7 +8,7 @@
 
 
 // Constant BindGroup
-@group(0) @binding(0) var<uniform> jointInfo: vec4<f32>;                    // [0] is jointNum, rest is unused yet
+@group(0) @binding(0) var<uniform> jointInfo: vec4<f32>;                    // [0] = hasJoint, [1] = jointNum
 @group(0) @binding(1) var<storage> inverseBindMatrics: array<mat4x4<f32>>;  // size = jointNum
 
 // Frame BindGroup
