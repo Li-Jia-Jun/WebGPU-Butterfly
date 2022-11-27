@@ -8,13 +8,16 @@ import {cloneDeep} from 'lodash';
 
 function quatToEulerAngles(q : quat) : number[]
 {
+
+    // The rotation order is Z-Y-X
+
     let x, y, z;
 
-    const sinr_cosp = 2 * (q[3] * q[0] + q[1] * q[2]);
-    const cosr_cosp = 1 - 2 * (q[0] * q[0] + q[1]*q[1]);
+    const sinr_cosp = 2 * (q[3]*q[0] + q[1]*q[2]);
+    const cosr_cosp = 1 - 2 * (q[0]*q[0] + q[1]*q[1]);
     x = Math.atan2(sinr_cosp, cosr_cosp);
     
-    const sinp = 2 * (q[3] * q[1] - q[2] * q[0]);
+    const sinp = 2 * (q[3]*q[1] - q[2]*q[0]);
     if(Math.abs(sinp) >= 1)
     {
         y = sinp >= 0 ? Math.PI / 2 : -Math.PI / 2;
@@ -24,9 +27,8 @@ function quatToEulerAngles(q : quat) : number[]
         y = Math.asin(sinp);
     }
 
-
-    const siny_cosp = 2 * (q[3] * q[2] + q[0] * q[1]);
-    const cosy_cosp = 1 - 2 * (q[1] * q[1] + q[2] * q[2]);
+    const siny_cosp = 2 * (q[3]*q[2] + q[0]*q[1]);
+    const cosy_cosp = 1 - 2 * (q[1]*q[1] + q[2]*q[2]);
     z = Math.atan2(siny_cosp, cosy_cosp);
 
     const iPI = 1.0 / Math.PI;
@@ -39,10 +41,10 @@ export class Joint
 {
     // Local transformation
     translate : number[];
-    rotate : number[]; // Euler angles in degree
+    rotate : number[];      // Euler angles in degree, the order is Z-Y-X
     scale : number[];
 
-    children : number[];
+    children : number[];    // children joint indices, we can assume the max children number is 8
 
     constructor()
     {
@@ -52,7 +54,7 @@ export class Joint
 
 export class Skeleton
 {
-    rootIndices : number[];
+    rootIndices : number[]; // Some model may have multiple root joints
     joints : Joint[];
 
     constructor()
@@ -103,11 +105,6 @@ export default class GLTFGroup
         {
             this.#initSkeletons();
         }
-
-        console.log(this.skeletons[1]);
-        console.log(this.jointsMap);
-        console.log(quatToEulerAngles(quat.fromValues(0.3649717, 0.2778159, 0.1150751, 0.8811196)));
-
 
         // Calculate matrix for each node locally (since gltf alone does not give this info directly)
         this.nodeMatrics = new Map<GLTFSpace.Node, mat4>();
