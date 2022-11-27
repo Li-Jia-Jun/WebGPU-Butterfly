@@ -2,7 +2,65 @@ import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
 import {GltfLoader}  from 'gltf-loader-ts';
 import {GltfAsset}  from 'gltf-loader-ts';
 import {mat4, vec3, quat} from 'gl-matrix';
+import {cloneDeep} from 'lodash';
 
+
+
+function quatToEulerAngles(q : quat) : number[]
+{
+    let x, y, z;
+
+    const sinr_cosp = 2 * (q[3] * q[0] + q[1] * q[2]);
+    const cosr_cosp = 1 - 2 * (q[0] * q[0] + q[1]*q[1]);
+    x = Math.atan2(sinr_cosp, cosr_cosp);
+    
+    const sinp = 2 * (q[3] * q[1] - q[2] * q[0]);
+    if(Math.abs(sinp) >= 1)
+    {
+        y = sinp >= 0 ? Math.PI / 2 : -Math.PI / 2;
+    }
+    else
+    {
+        y = Math.asin(sinp);
+    }
+
+
+    const siny_cosp = 2 * (q[3] * q[2] + q[0] * q[1]);
+    const cosy_cosp = 1 - 2 * (q[1] * q[1] + q[2] * q[2]);
+    z = Math.atan2(siny_cosp, cosy_cosp);
+
+    const iPI = 1.0 / Math.PI;
+
+    return [x * 180.0 * iPI, y * 180.0 * iPI, z * 180.0 * iPI];
+}
+
+
+export class Joint
+{
+    // Local transformation
+    translate : number[];
+    rotate : number[]; // Euler angles in degree
+    scale : number[];
+
+    children : number[];
+
+    constructor()
+    {
+        this.children = new Array();
+    }
+}
+
+export class Skeleton
+{
+    rootIndices : number[];
+    joints : Joint[];
+
+    constructor()
+    {
+        this.rootIndices = new Array();
+        this.joints = new Array();
+    }
+}
 
 // Gltf and all of its instances
 export default class GLTFGroup
@@ -13,11 +71,15 @@ export default class GLTFGroup
 
     nodeMatrics : Map<GLTFSpace.Node, mat4>;
 
+    skeletons : Skeleton[];
+
     transforms : mat4[];
     names : string[];
     instanceCount;
 
-    matrixUpdate : boolean;
+    hasJoint : boolean;
+
+    jointsMap : Map<string, number>; // Map of joint name and its index in GLTF (not node index)
     
     constructor(){}
 
@@ -29,26 +91,106 @@ export default class GLTFGroup
         this.names = names;
         this.instanceCount = instanceCount;
 
-        this.matrixUpdate = false;
-
         // Load gltf using gltf-loader-ts
         let loader: GltfLoader = new GltfLoader();
         this.asset = await loader.load(this.uri);
         this.gltf = this.asset.gltf;   
         this.asset.preFetchAll();
 
-        // Calculate matrix for each node locally
-        // since gltf alone does not give this info directly
+        // Build skeleton if GLTF includes rigging
+        this.hasJoint = this.gltf.skins !== undefined; 
+        if(this.hasJoint)
+        {
+            this.#initSkeletons();
+        }
+
+        console.log(this.skeletons[1]);
+        console.log(this.jointsMap);
+        console.log(quatToEulerAngles(quat.fromValues(0.3649717, 0.2778159, 0.1150751, 0.8811196)));
+
+
+        // Calculate matrix for each node locally (since gltf alone does not give this info directly)
         this.nodeMatrics = new Map<GLTFSpace.Node, mat4>();
-
-        // Force set root to identity matrix
-        //this.nodeMatrics.set(this.gltf.nodes[0], mat4.fromValues(1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1));
-
         const defaultTransform : mat4 = mat4.fromValues(1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1);
         for(const [index, node] of this.gltf.nodes.entries())
         {
             this.#calcNodeMatrix(index, node, defaultTransform, false);
         }
+    }
+
+    #initSkeletons()
+    {
+        this.skeletons = new Array();
+        for(let i = 0; i < this.instanceCount; ++i)
+        {
+            this.skeletons.push(new Skeleton());
+
+            if(i == 0)
+            {
+                // Temp array to help identify root joints
+                const jointNum = this.gltf.skins[0].joints.length;
+                let rootJointMarks : boolean[] = new Array(jointNum).fill(true);
+
+                for(const [index, joint] of this.gltf.skins[0].joints.entries())
+                {
+                    this.#addJointToSkeleton(this.skeletons[i], this.gltf.nodes[joint], rootJointMarks);
+                }
+
+                // Root jointss
+                for(const [index, value] of rootJointMarks.entries())
+                {
+                    if(value == true)
+                    {
+                        this.skeletons[i].rootIndices.push(index);
+                    }
+                }
+
+                // Build joint name map for debugging purpose
+                this.jointsMap = new Map<string, number>();
+                for(const [jointIndex, nodeIndex] of this.gltf.skins[0].joints.entries())
+                {
+                   this.jointsMap.set(this.gltf.nodes[nodeIndex].name, jointIndex);
+                }
+            }
+            else
+            {
+                // The other skeleton simply copy the data from first skeleton
+                this.skeletons[i].rootIndices = cloneDeep(this.skeletons[0].rootIndices);
+                this.skeletons[i].joints = cloneDeep(this.skeletons[0].joints);
+            }
+        }
+    }
+
+    #addJointToSkeleton(skeleton : Skeleton, node : GLTFSpace.Node, rootJointMarks : boolean[])
+    {
+        // First assume that this joint is root joint
+        // Will correct it along the way
+
+        let joint = new Joint();
+
+        let t : number[] = node.translation !== undefined ? node.translation : [0, 0, 0];
+        let r : number[] = node.rotation !== undefined? node.rotation : [0, 0, 0, 1];  // Quaternion
+        let s : number[] = node.scale !== undefined? node.scale : [1, 1, 1];
+
+        joint.translate = t;
+
+        let quatRot = quat.fromValues(r[0], r[1], r[2], r[3]);
+        joint.rotate = quatToEulerAngles(quatRot);
+        
+        joint.scale = s;
+
+        // Joint children
+        if(node.children !== undefined)
+        {
+            for(const child of node.children)
+            {
+                const jointIndex = this.gltf.skins[0].joints.findIndex(nodeIndex => nodeIndex == child);
+                rootJointMarks[jointIndex] = false; // All children joints are not root joints
+                joint.children.push(jointIndex);
+            }
+        }
+
+        skeleton.joints.push(joint);
     }
 
     #calcNodeMatrix(index : number, node : GLTFSpace.Node, parentMat : mat4, parentUpdate : boolean)
