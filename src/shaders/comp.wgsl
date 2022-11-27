@@ -7,9 +7,18 @@ fn simulate(
   @builtin(global_invocation_id) GlobalInvocationID : vec3<u32>
 ) {
      var m = transform[0];
-     m[0][3] += 5;
+
+     //column major
+     
+     
+     
+     
+
+     m[3][0] = m[3][0] + 0.001;
      transform[0] = m;   
   }
+
+
   
   // Store the new particle value
   //transform.transformationMatrix = ;

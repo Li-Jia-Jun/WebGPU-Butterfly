@@ -7,7 +7,8 @@ import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
 import {mat4, vec3} from 'gl-matrix';
 import GLTFGroup from './gltf_group';
 
-
+var frame = 0;
+var tmp;
 // Make sure the shaders follow this mapping
 const ShaderLocations = 
 {
@@ -249,7 +250,7 @@ export default class GltfRenderer
         this.instanceBuffer = this.device.createBuffer
         ({
             size: 16 * this.gltf_group.instanceCount * Float32Array.BYTES_PER_ELEMENT,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
         this.instanceBindGroupLayout = this.device.createBindGroupLayout
         ({
@@ -275,10 +276,7 @@ export default class GltfRenderer
     initComputeBindGroup() {
         //a 4x4 transformation matrix
         const computeBufferSize = 4 * 16;
-        this.computeBuffer = this.device.createBuffer ({
-            size: this.gltf_group.instanceCount * computeBufferSize,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-        });
+        this.computeBuffer = this.instanceBuffer;
         this.computeBindGroupLayout = this.device.createBindGroupLayout
         ({
             label: `Compute BindGroupLayout`,
@@ -296,7 +294,7 @@ export default class GltfRenderer
             entries: 
             [{
                 binding: 0, // transformation matrix
-                resource: { buffer: this.instanceBuffer },
+                resource: { buffer: this.computeBuffer },
             }],
         });
     }
@@ -527,12 +525,12 @@ export default class GltfRenderer
 
         this.commandEncoder = this.device.createCommandEncoder();
         
+        //let transformationMatrixData  =  new Float32Array (this.gltf_group.transforms[0]).buffer;
+
+        //let gpuBufferArray = new Uint8Array(this.computeBuffer.getMappedRange());
+        //const tablesArray = new Float32Array(this.computeBuffer.getMappedRange());
+       // this.device.queue.writeBuffer(this.computeBuffer, 0, transformationMatrixData);
         
-        let transformationMatrixData  =  new Float32Array (this.gltf_group.transforms[0]).buffer;
-
-       
-        this.device.queue.writeBuffer(this.computeBuffer, 0, transformationMatrixData);
-
         // console.log("before: ");
         // let tmpBufferArray = new Uint8Array(this.computeBuffer.getMappedRange());
         // console.log(tmpBufferArray);
@@ -546,15 +544,19 @@ export default class GltfRenderer
 
        
         this.computepassEncoder.end();
-        console.log("after: ");
-        // let tmpBufferArray = new Uint8Array(this.computeBuffer.getMappedRange());
-        // console.log(tmpBufferArray);
+        
+        if(tmp != this.computeBuffer) {
+            
+        }
+
+        
         // Render pass
         this.passEncoder = this.commandEncoder.beginRenderPass(renderPassDesc);
 
         this.passEncoder.setBindGroup(0, this.frameBindGroup);
         this.passEncoder.setBindGroup(2, this.instanceBindGroup);
 
+        //+5
         // Bind gltf data to render pass
         for (const [node, bindGroup] of this.nodeGpuData)
         {
@@ -606,7 +608,9 @@ export default class GltfRenderer
         // Submit command queue
         this.queue.submit([this.commandEncoder.finish()]);
 
-        requestAnimationFrame(this.renderGLTF);     
+        frame++;
+        requestAnimationFrame(this.renderGLTF);   
+          
     }
 
     updateFrameBuffer(projMat : mat4, viewMat : mat4, pos : vec3, time : number)
@@ -635,7 +639,6 @@ export default class GltfRenderer
             let arr = new Float32Array(instanceArrayBuffer, st, 16);
             arr.set(mat);
         }
-
         this.device.queue.writeBuffer(this.instanceBuffer, 0, instanceArrayBuffer);
     }
 }
