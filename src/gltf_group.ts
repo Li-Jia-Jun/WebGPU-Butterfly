@@ -156,7 +156,7 @@ export default class GLTFGroup
                 this.skeletons[i].joints = cloneDeep(this.skeletons[0].joints);
             }
         }
-        //console.log(this.jointsMap);
+        console.log(this.jointsMap);
     }
 
     #addJointToSkeleton(skeleton : Skeleton, node : GLTFSpace.Node, rootJointMarks : boolean[])
