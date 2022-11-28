@@ -7,7 +7,9 @@
 
 import GLTFGroup from './gltf_group';
 import GltfRenderer from './gltf_renderer';
-import OrbitCamera from './orbit_camera'; 
+
+import OrbitCamera from './orbit_camera';
+import FlyingCamera  from './flying_camera';
 import { mat4 } from 'gl-matrix';
 
 export default class Application 
@@ -19,8 +21,9 @@ export default class Application
     gltf_figure : GLTFGroup;
 
     canvas : HTMLCanvasElement;
-    camera : OrbitCamera;
     context : GPUCanvasContext;
+    //camera : OrbitCamera;
+    camera: FlyingCamera;
 
     fov : number = Math.PI * 0.5;
     zNear : number = 0.001;
@@ -43,6 +46,7 @@ export default class Application
     async start()
     {
         this.canRun = await this.initializeWebGPU();
+
         if(this.canRun)
         {
             // HTML stuff
@@ -52,11 +56,12 @@ export default class Application
             this.resizeBackings();
 
             // Camera
-            this.camera = new OrbitCamera(this.canvas, () => {this.updateFrame();});
-            this.camera.target = [0, 0, 0];
-            this.camera.maxDistance = 100;
-            this.camera.minDistance = 0.001;
-            this.camera.distance = 10;
+            //this.camera = new OrbitCamera(this.canvas, () => {this.updateFrame();});
+            this.camera = new FlyingCamera(this.canvas, () => {this.updateFrame();});
+            // this.camera.target = [0, 0, 0];
+            // this.camera.maxDistance = 100;
+            // this.camera.minDistance = 0.001;
+            // this.camera.distance = 10;
 
             // Rigged Buffterfly (first renderer)
             let s : number = 1.5;
@@ -149,6 +154,8 @@ export default class Application
 
     updateFrame()
     {
+        //if(this.renderer_butterfly == undefined) return;
+
         // Update Camera
         let projMat = mat4.create();
         const aspect = this.canvas.width / this.canvas.height;
