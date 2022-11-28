@@ -100,6 +100,8 @@ export default class GltfRenderer
     skeletonBindGroup: GPUBindGroup;
     skeletonBindGroupLayout: GPUBindGroupLayout;
 
+    //time
+    timeBuffer: GPUBuffer;
     // Web stuff
     canvas : HTMLCanvasElement;
 
@@ -387,9 +389,21 @@ export default class GltfRenderer
                 binding: 0, // transformation matrix
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: {type: 'storage'},
-            }],
+            },
+            {
+                binding: 1, // time
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'read-only-storage'},
+            }
+        ],
         });    
 
+        this.timeBuffer = this.device.createBuffer
+        ({            
+            size: Float32Array.BYTES_PER_ELEMENT,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+        
         this.computeBindGroup = this.device.createBindGroup
         ({
             label: `Compute BindGroup`,
@@ -398,7 +412,12 @@ export default class GltfRenderer
             [{
                 binding: 0, // transformation matrix
                 resource: { buffer: this.computeBuffer },
-            }],
+            },
+            {
+                binding: 1, // time
+                resource: { buffer: this.timeBuffer },
+            }
+            ],
         });
 
         
@@ -803,6 +822,13 @@ export default class GltfRenderer
         //let transformationMatrixData  =  new Float32Array (this.gltf_group.transforms[0]).buffer;
 
         //this.device.queue.writeBuffer(this.computeBuffer, 0, transformationMatrixData);
+
+        const d = new Date();
+        let time = d.getTime();
+        const uniformTime = new Float32Array([0]);
+        uniformTime[0] = time / 1000;
+        console.log(time / 1000);
+        this.device.queue.writeBuffer(this.timeBuffer, 0, uniformTime.buffer);
 
         //compute shader first
         this.computepassEncoder = this.commandEncoder.beginComputePass();

@@ -172,3 +172,4 @@ export default class Application
 
 const app = new Application();
 app.start();
+
