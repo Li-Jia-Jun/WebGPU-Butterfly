@@ -21,6 +21,8 @@ struct Time {
 //model transformation matrix
 @group(0) @binding(0) var<storage, read_write> transform : array<mat4x4<f32>>;
 @group(0) @binding(1) var<storage> time: Time;
+
+
 //skeleton information
 @group(1) @binding(0) var<storage> rootIndices: array<f32>;
 @group(1) @binding(1) var<storage> data: Joints;
@@ -31,6 +33,14 @@ fn simulate(
   @builtin(global_invocation_id) GlobalInvocationID : vec3<u32>
 ) {
     var m = transform[0];
+
+    var a = data.joints[0].rotate;
+
+    var alpha = 3.14;
+
+    data.joints[0].rotate.z = alpha;
+    
+
     //column major
     m[3][0] = m[3][0] + time.value;
     transform[0] = m; 

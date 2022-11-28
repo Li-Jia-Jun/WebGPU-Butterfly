@@ -456,7 +456,6 @@ export default class GltfRenderer
         });
 
         //for one now
-        
         const jointsBufferSize = numSkeleton * Float32Array.BYTES_PER_ELEMENT * this.gltf_group.skeletons[0].joints.length * 17; //(3 + 3 + 3 + 8)
         //each single joint
         const jointBufferSize = Float32Array.BYTES_PER_ELEMENT * 17;
@@ -827,7 +826,7 @@ export default class GltfRenderer
         let time = d.getTime();
         const uniformTime = new Float32Array([0]);
         uniformTime[0] = time / 1000;
-        console.log(time / 1000);
+        console.log(time / 1000000000);
         this.device.queue.writeBuffer(this.timeBuffer, 0, uniformTime.buffer);
 
         //compute shader first
