@@ -143,13 +143,17 @@ export default class Application
 
     run()
     {
-        this.updateFrame();
+        this.camera.canRefresh = true;
 
+        this.updateFrame();
+        
         this.renderer_butterfly.updateInstanceBuffer();
         this.renderer_butterfly.renderGLTF();  
 
         this.renderer_figure.updateInstanceBuffer();
         this.renderer_figure.renderGLTF();  
+
+        
     }
 
     updateFrame()

@@ -10,6 +10,7 @@ export default class FlyingCamera {
     _dirty = true;
 
     speed = 3;
+    mouseSpeed = 0.01;
 
     _pressedKeys = new Array(128);
 
@@ -17,6 +18,8 @@ export default class FlyingCamera {
     mousemoveCallback = null;
     mouseupCallback = null;
     frameCallback = null;
+
+    canRefresh : boolean = false;
 
     _position = vec3.create();
     
@@ -50,7 +53,6 @@ export default class FlyingCamera {
       }
       lastX = event.pageX;
       lastY = event.pageY;
-      console.log("Mouse down");
 
     };
     this.mousemoveCallback = (event) => {
@@ -59,15 +61,14 @@ export default class FlyingCamera {
       if(document.pointerLockElement) {
           xDelta = event.movementX;
           yDelta = event.movementY;
-          this.rotateView(xDelta * 0.025, yDelta * 0.025);
+          this.rotateView(xDelta * this.mouseSpeed, yDelta * this.mouseSpeed);
       } else if (moving) {
           xDelta = event.pageX - lastX;
           yDelta = event.pageY - lastY;
           lastX = event.pageX;
           lastY = event.pageY;
-          this.rotateView(xDelta * 0.025, yDelta * 0.025);
+          this.rotateView(xDelta * this.mouseSpeed, yDelta * this.mouseSpeed);
       }
-      console.log("Mouse moving");
     };
     this.mouseupCallback = (event) => {
       if (event.isPrimary) {
@@ -77,6 +78,7 @@ export default class FlyingCamera {
 
     let lastFrameTime = -1;
     this.frameCallback = (timestamp) => {
+
       if (lastFrameTime == -1) {
         lastFrameTime = timestamp;
       } else {
@@ -84,9 +86,15 @@ export default class FlyingCamera {
         lastFrameTime = timestamp;
       }
       requestAnimationFrame(this.frameCallback);
-      refresh();
 
+      if(this.canRefresh) // Don't refresh until 'main' allows
+      {
+          refresh();
+      }
     }
+
+    this.element = element;
+
     requestAnimationFrame(this.frameCallback);
   }
 
@@ -102,7 +110,6 @@ export default class FlyingCamera {
       this._element.addEventListener('pointerdown', this.mousedownCallback);
       this._element.addEventListener('pointermove', this.mousemoveCallback);
       this._element.addEventListener('pointerup', this.mouseupCallback);
-      console.log("Added listener");
     }
   }
 
@@ -168,7 +175,6 @@ export default class FlyingCamera {
   }
 
   update(frameTime) {
-    //console.log(frameTime);
     if (!this._element) return;
 
     const speed = (this.speed / 1000) * frameTime;
