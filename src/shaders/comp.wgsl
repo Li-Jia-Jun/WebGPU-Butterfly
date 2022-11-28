@@ -43,15 +43,24 @@ fn simulate(
     var a = data.joints[5].rotate.z;
 
     //use translation along x to test any value
-    m[3][0] = m[3][0] + 0.01; 
+    //m[3][0] = m[3][0] + 0.01; 
     
-    var testJoint = jointTransforms[5];
-    testJoint[2][1] = testJoint[2][1] + 0.5;
-    //testJoint[1][0] = testJoint[1][0] + 0.05;
+    var joint9 = jointTransforms[8];
+    var joint19 = jointTransforms[19];
 
+    //var rotZ = mat4x4<f32>(vec4<f32>(0.5253, 0.5253, 0, 0), vec4<f32>(-0.5253, 0.5253, 0, 0), vec4<f32>(0, 0, 1, 0), vec4<f32>(0, 0, 0, 1));
+
+    var angle = -1.5 * cos(time.value / 1000000);
+    var rotZ = mat4x4<f32>(vec4<f32>(cos(angle), sin(angle), 0, 0), vec4<f32>( -sin(angle), cos(angle), 0, 0), vec4<f32>(0, 0, 1, 0), vec4<f32>(0, 0, 0, 1));
+    joint9 = rotZ * joint9;
+
+    angle = 1.5 * cos(time.value / 1000000);
+    rotZ = mat4x4<f32>(vec4<f32>(cos(angle), sin(angle), 0, 0), vec4<f32>( -sin(angle), cos(angle), 0, 0), vec4<f32>(0, 0, 1, 0), vec4<f32>(0, 0, 0, 1));
+    joint19 = rotZ * joint19;
 
     //output joint transformation matrix
-    jointTransforms[0] = testJoint;
+    jointTransforms[8] = joint9;
+    jointTransforms[19] = joint19;
 
 
     //output model matrix of the butterfly
