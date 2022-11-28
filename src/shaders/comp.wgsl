@@ -76,6 +76,11 @@ fn trsToMatrix(translate : vec3<f32> , rotate : vec3<f32>, scale : vec3<f32>) ->
     return t * r * s;
 }
 
+fn updateJointTransform(jointIndex : u32, parentTransform : mat4x4<f32>)
+{
+ 
+}
+
 @compute @workgroup_size(1)
 fn simulate(
   @builtin(global_invocation_id) GlobalInvocationID : vec3<u32>
@@ -91,27 +96,53 @@ fn simulate(
 
     //use translation along x to test any value
     //m[3][0] = m[3][0] + 0.01; 
-    
-    var joint9 = jointTransforms[8];
-    var joint19 = jointTransforms[19];
 
-    //var rotZ = mat4x4<f32>(vec4<f32>(0.5253, 0.5253, 0, 0), vec4<f32>(-0.5253, 0.5253, 0, 0), vec4<f32>(0, 0, 1, 0), vec4<f32>(0, 0, 0, 1));
+    var j_9 = data.joints[8];
+    j_9.rotate = j_9.rotate + vec3(0, 0, 45 * 0.001);
 
-    var angle = -1.5 * cos(time.value / 1000000);
-    var rotZ = mat4x4<f32>(vec4<f32>(cos(angle), sin(angle), 0, 0), vec4<f32>( -sin(angle), cos(angle), 0, 0), vec4<f32>(0, 0, 1, 0), vec4<f32>(0, 0, 0, 1));
-    joint9 = rotZ * joint9;
+    // Update skeleton
+    for(var i = 0; i < 5; i++) 
+    {
+      var rootIndex = rootIndices[i];
 
-    angle = 1.5 * cos(time.value / 1000000);
-    rotZ = mat4x4<f32>(vec4<f32>(cos(angle), sin(angle), 0, 0), vec4<f32>( -sin(angle), cos(angle), 0, 0), vec4<f32>(0, 0, 1, 0), vec4<f32>(0, 0, 0, 1));
-    joint19 = rotZ * joint19;
+      if(rootIndex < 0)
+      break;
 
-    // for(var i = 0; i < 30; i++) {
+   var joint = data.joints[rootIndex];
+    var jointTransform = trsToMatrix(joint.translate, joint.rotate, joint.scale);
 
-    // }
+    jointTransform = parentTransform * jointTransform;
 
-    //output joint transformation matrix
-    jointTransforms[8] = joint9;
-    jointTransforms[19] = joint19;
+    // Update current transform
+    jointTransforms[jointIndex] = jointTransform;
+
+    // Update children
+    for(var i = 0; i < 8; i++)
+    {
+      if(i < 4)
+      {
+        if(joint.children1[i] >= 0)
+        {
+          updateJointTransform(joint.children1[i], jointTransform);
+        }
+        else
+        {
+          break;
+        }
+      }
+      else
+      {
+        if(joint.children2[i-4] >= 0)
+        {
+          updateJointTransform(joint.children2[i-4], jointTransform);
+        }
+        else
+        {
+          break;
+        }
+      } 
+    }
+    }
 
     //m[3][1] = m[3][1] + 0.01;
 
