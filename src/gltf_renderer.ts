@@ -386,7 +386,7 @@ export default class GltfRenderer
             label: `Compute BindGroupLayout`,
             entries: 
             [{
-                binding: 0, // transformation matrix
+                binding: 0, // model transformation matrix
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: {type: 'storage'},
             },
@@ -394,6 +394,11 @@ export default class GltfRenderer
                 binding: 1, // time
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: {type: 'read-only-storage'},
+            },
+            {
+                binding: 2, // joint transformation matrix
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'storage'},
             }
         ],
         });    
@@ -410,13 +415,17 @@ export default class GltfRenderer
             layout: this.computeBindGroupLayout,
             entries: 
             [{
-                binding: 0, // transformation matrix
+                binding: 0, // model transformation matrix
                 resource: { buffer: this.computeBuffer },
             },
             {
                 binding: 1, // time
                 resource: { buffer: this.timeBuffer },
-            }
+            },
+            {
+                binding: 2, // joint transformation matrix
+                resource: { buffer: this.jointTransformBuffer},
+            },
             ],
         });
 
@@ -826,7 +835,7 @@ export default class GltfRenderer
         let time = d.getTime();
         const uniformTime = new Float32Array([0]);
         uniformTime[0] = time / 1000;
-        console.log(time / 1000000000);
+        //console.log(time / 1000000000);
         this.device.queue.writeBuffer(this.timeBuffer, 0, uniformTime.buffer);
 
         //compute shader first

@@ -21,7 +21,8 @@ struct Time {
 //model transformation matrix
 @group(0) @binding(0) var<storage, read_write> transform : array<mat4x4<f32>>;
 @group(0) @binding(1) var<storage> time: Time;
-
+//joint transformation matrix
+@group(0) @binding(2) var<storage, read_write> jointTransforms: array<mat4x4<f32>>;
 
 //skeleton information
 @group(1) @binding(0) var<storage> rootIndices: array<f32>;
@@ -32,17 +33,28 @@ struct Time {
 fn simulate(
   @builtin(global_invocation_id) GlobalInvocationID : vec3<u32>
 ) {
+
+    //matrices are all column major !!!
+
+    // the only butterfly model matrix
     var m = transform[0];
 
-    var a = data.joints[0].rotate;
+    //test joint data
+    var a = data.joints[5].rotate.z;
 
-    var alpha = 3.14;
-
-    data.joints[0].rotate.z = alpha;
+    //use translation along x to test any value
+    m[3][0] = m[3][0] + 0.01; 
     
+    var testJoint = jointTransforms[5];
+    testJoint[2][1] = testJoint[2][1] + 0.5;
+    //testJoint[1][0] = testJoint[1][0] + 0.05;
 
-    //column major
-    m[3][0] = m[3][0] + time.value;
+
+    //output joint transformation matrix
+    jointTransforms[0] = testJoint;
+
+
+    //output model matrix of the butterfly
     transform[0] = m; 
     
   }
