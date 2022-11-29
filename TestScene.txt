@@ -1,0 +1,20 @@
+GLTF
+NAME b0
+URL https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-done.gltf
+T -4 0 0
+R 0 0 0
+S 1.5 1.5 1.5
+
+GLTF
+NAME b1
+URL https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-done.gltf
+T 4 0 0
+R 0 0 0
+S 1.5 1.5 1.5
+
+GLTF
+NAME f1
+URL https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedFigure/glTF/RiggedFigure.gltf
+T 0 0 0
+R 0 0 0
+S 3 3 3
