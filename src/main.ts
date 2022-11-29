@@ -48,6 +48,8 @@ export default class Application
     depthTexture: GPUTexture;
     depthTextureView: GPUTextureView;
 
+    time : number;      // the application running time in seconds
+
     canRun : boolean;
 
     constructor(){}
@@ -79,7 +81,7 @@ export default class Application
 
             // Camera
             //this.camera = new OrbitCamera(this.canvas, () => {this.updateFrame();});
-            this.camera = new FlyingCamera(this.canvas, () => {this.updateFrame();});
+            this.camera = new FlyingCamera(this.canvas, () => {});
             // this.camera.target = [0, 0, 0];
             // this.camera.maxDistance = 100;
             // this.camera.minDistance = 0.001;
@@ -129,8 +131,8 @@ export default class Application
             //     [[s2,0,0,0,  0,s2,0,0,  0,0,s2,0,  0,0,0,1]]);   
             // this.renderer_figure = new GltfRenderer();
             // await this.renderer_figure.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_figure, this.depthTexture, this.depthTextureView);
-
-            this.run();
+            
+            this.run(0);
         }
     }
 
@@ -186,33 +188,24 @@ export default class Application
         this.depthTextureView = this.depthTexture.createView();
     }
 
-    run()
+    updateFrameData(timestamp : number)
     {
-        this.camera.canRefresh = true;
-
-        this.updateFrame();
-        
-        this.renderer_butterfly.updateInstanceBuffer();
-        this.renderer_butterfly.renderGLTF();  
-
-        // this.renderer_figure.updateInstanceBuffer();
-        // this.renderer_figure.renderGLTF();  
-    }
-
-    updateFrame()
-    {
-        //if(this.renderer_butterfly == undefined) return;
+        // Update time
+        this.time = timestamp * 0.001;
+        //console.log("time = " + this.time.toFixed(3));
 
         // Update Camera
+        this.camera.frameCallback(timestamp);
+
+        // Update camere in renderer 
         let projMat = mat4.create();
         const aspect = this.canvas.width / this.canvas.height;
         mat4.perspective(projMat, this.fov, aspect, this.zNear, this.zFar);
         
         // Update camera buffer for each renderer
-        this.renderer_butterfly.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, 0);    
-       // this.renderer_figure.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, 0);
-
-        this.updateDisplay();
+        this.renderer_butterfly.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, this.time);    
+       // this.renderer_figure.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, tihs.time);
+    
     }
 
     updateDisplay()
@@ -220,6 +213,25 @@ export default class Application
         // Camera Pos
         let pos = this.camera.position;
         this.#camPosDisplay.innerHTML = "Camera Position: [" + pos[0].toFixed(2) + ", " + pos[1].toFixed(2) + ", " + pos[2].toFixed(2) + "]";
+    }
+
+    run = (timestamp : number) =>
+    {
+        // Update data in each frame
+        this.updateFrameData(timestamp);
+        
+        // Render
+        this.renderer_butterfly.updateInstanceBuffer();
+        this.renderer_butterfly.renderGLTF();  
+
+        // this.renderer_figure.updateInstanceBuffer();
+        // this.renderer_figure.renderGLTF();  
+
+        // Update HTML display
+        this.updateDisplay();
+
+        // Loop
+        requestAnimationFrame(this.run);
     }
 }
 

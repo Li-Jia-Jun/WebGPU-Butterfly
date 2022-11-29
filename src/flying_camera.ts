@@ -85,7 +85,7 @@ export default class FlyingCamera {
         this.update(timestamp - lastFrameTime);
         lastFrameTime = timestamp;
       }
-      requestAnimationFrame(this.frameCallback);
+      //requestAnimationFrame(this.frameCallback);
 
       if(this.canRefresh) // Don't refresh until 'main' allows
       {
@@ -95,7 +95,7 @@ export default class FlyingCamera {
 
     this.element = element;
 
-    requestAnimationFrame(this.frameCallback);
+    //requestAnimationFrame(this.frameCallback);
   }
 
   set element(value) {
