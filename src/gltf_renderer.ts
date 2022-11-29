@@ -6,7 +6,6 @@ import compShaderCode from './shaders/comp.wgsl';
 import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
 import {mat4, vec3, vec4} from 'gl-matrix';
 import GLTFGroup from './gltf_group';
-import { buffer } from 'stream/consumers';
 
 
 // Make sure the shaders follow this mapping
