@@ -111,22 +111,24 @@ export default class Application
 
             await this.gltf_butterfly.init(
                 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-done.gltf',
+
                 controls.instance_num,
                 instance_name,
                 instance_trans);
+
             this.renderer_butterfly = new GltfRenderer();
             await this.renderer_butterfly.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_butterfly, this.depthTexture, this.depthTextureView, true);
 
-            // Rigged Figure
-            let s2 : number = 3.0;
-            this.gltf_figure = new GLTFGroup();
-            await this.gltf_figure.init(
-                'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedFigure/glTF/RiggedFigure.gltf',
-                1,
-                ["f1"],
-                [[s2,0,0,0,  0,s2,0,0,  0,0,s2,0,  0,0,0,1]]);   
-            this.renderer_figure = new GltfRenderer();
-            await this.renderer_figure.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_figure, this.depthTexture, this.depthTextureView);
+            // // Rigged Figure
+            // let s2 : number = 3.0;
+            // this.gltf_figure = new GLTFGroup();
+            // await this.gltf_figure.init(
+            //     'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedFigure/glTF/RiggedFigure.gltf',
+            //     1,
+            //     ["f1"],
+            //     [[s2,0,0,0,  0,s2,0,0,  0,0,s2,0,  0,0,0,1]]);   
+            // this.renderer_figure = new GltfRenderer();
+            // await this.renderer_figure.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_figure, this.depthTexture, this.depthTextureView);
 
             this.run();
         }
@@ -193,10 +195,8 @@ export default class Application
         this.renderer_butterfly.updateInstanceBuffer();
         this.renderer_butterfly.renderGLTF();  
 
-        this.renderer_figure.updateInstanceBuffer();
-        this.renderer_figure.renderGLTF();  
-
-        
+        // this.renderer_figure.updateInstanceBuffer();
+        // this.renderer_figure.renderGLTF();  
     }
 
     updateFrame()
@@ -210,7 +210,7 @@ export default class Application
         
         // Update camera buffer for each renderer
         this.renderer_butterfly.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, 0);    
-        this.renderer_figure.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, 0);
+       // this.renderer_figure.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, 0);
 
         this.updateDisplay();
     }
@@ -226,3 +226,4 @@ export default class Application
 
 const app = new Application();
 app.start();
+

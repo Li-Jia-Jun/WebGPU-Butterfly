@@ -1,10 +1,12 @@
 
 import vertShaderCode from './shaders/gltf.vert.wgsl';
 import fragShaderCode from './shaders/gltf.frag.wgsl';
+import compShaderCode from './shaders/comp.wgsl';
 
 import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
 import {mat4, vec3, vec4} from 'gl-matrix';
 import GLTFGroup from './gltf_group';
+import { buffer } from 'stream/consumers';
 
 
 // Make sure the shaders follow this mapping
@@ -85,6 +87,25 @@ export default class GltfRenderer
     commandEncoder: GPUCommandEncoder;
     passEncoder: GPURenderPassEncoder;
 
+    //ComputePipeline
+    computepassEncoder: GPUComputePassEncoder;
+    computePipeline: GPUComputePipeline;
+    computePipelineLayout: GPUPipelineLayout;
+    computeBindGroup: GPUBindGroup;
+    computeBindGroupLayout: GPUBindGroupLayout;
+    computeBuffer: GPUBuffer;
+    compShaderModule : GPUShaderModule;
+
+    compSkeletonInfoBuffer: GPUBuffer;
+    rootIdxBuffer: GPUBuffer;
+    parentIdxBuffer: GPUBuffer;
+    layerArrayBuffer: GPUBuffer;
+    jointsTRSBuffer: GPUBuffer
+    skeletonBindGroup: GPUBindGroup;
+    skeletonBindGroupLayout: GPUBindGroupLayout;
+
+    //time
+    timeBuffer: GPUBuffer;
     // Web stuff
     canvas : HTMLCanvasElement;
 
@@ -128,7 +149,27 @@ export default class GltfRenderer
         this.initConstantBindGroup();
         this.initFrameBindGroup();
         this.initNodeBindGroup();
+        this.initComputeBindGroup();
+        this.initSkeletonsBindGroup();
 
+        //create compute pipeline here, maybe not
+        this.computePipelineLayout = this.device.createPipelineLayout
+        ({
+            label: 'glTF Compute Pipeline Layout',
+            bindGroupLayouts: [
+               this.computeBindGroupLayout,
+               this.skeletonBindGroupLayout
+            ]
+
+        });
+        const computeModule = this.getComputeShaderModule();
+        this.computePipeline = this.device.createComputePipeline({
+            layout:  this.computePipelineLayout,
+            compute: {
+              module: computeModule, 
+              entryPoint: 'simulate',
+            },
+        });
         // Pipeline Layout
         this.gltfPipelineLayout = this.device.createPipelineLayout
         ({
@@ -340,6 +381,208 @@ export default class GltfRenderer
         });
     }
 
+    initComputeBindGroup() {
+        //a 4x4 transformation matrix
+        const computeBufferSize = 4 * 16;
+        this.computeBuffer = this.instanceBuffer;
+        this.computeBindGroupLayout = this.device.createBindGroupLayout
+        ({
+            label: `Compute BindGroupLayout`,
+            entries: 
+            [{
+                binding: 0, // model transformation matrix
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'storage'},
+            },
+            {
+                binding: 1, // time
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'read-only-storage'},
+            },
+            {
+                binding: 2, // joint transformation matrix
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'storage'},
+            }
+        ],
+        });    
+
+        this.timeBuffer = this.device.createBuffer
+        ({            
+            size: Float32Array.BYTES_PER_ELEMENT,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+        
+        this.computeBindGroup = this.device.createBindGroup
+        ({
+            label: `Compute BindGroup`,
+            layout: this.computeBindGroupLayout,
+            entries: 
+            [{
+                binding: 0, // model transformation matrix
+                resource: { buffer: this.computeBuffer },
+            },
+            {
+                binding: 1, // time
+                resource: { buffer: this.timeBuffer },
+            },
+            {
+                binding: 2, // joint transformation matrix
+                resource: { buffer: this.jointTransformBuffer},
+            },
+            ],
+        });
+
+        
+    }
+
+    initSkeletonsBindGroup() {
+        //TODO: Two buffers: rootIndices, joints
+
+        const numSkeleton = this.gltf_group.skeletons.length; // = 1
+
+        //for one skeleton
+
+        const skeletonInfoSize = Float32Array.BYTES_PER_ELEMENT * 20; // 4 + 16
+        this.compSkeletonInfoBuffer = this.device.createBuffer({
+            size: skeletonInfoSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+
+        const rootIdxBufferSize = Int32Array.BYTES_PER_ELEMENT * this.gltf_group.skRootIndices.length;
+        this.rootIdxBuffer = this.device.createBuffer({
+            size: rootIdxBufferSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+
+        const parentIdxBufferSize = Int32Array.BYTES_PER_ELEMENT * this.gltf_group.jtParentIndices.length;
+        this.parentIdxBuffer = this.device.createBuffer({
+            size: parentIdxBufferSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+
+        const layerBufferSize = Int32Array.BYTES_PER_ELEMENT * this.gltf_group.jtLayerArray.length;
+        this.layerArrayBuffer = this.device.createBuffer({
+            size: layerBufferSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        })
+
+        var skeletonInfoData1 = new Float32Array([
+            this.gltf_group.skeletons[0].joints.length, 
+            this.gltf_group.skRootIndices.length,
+            this.gltf_group.jtLayerArray.length, 
+            -1,]).buffer;
+        var skeletonInfoData2 = new Float32Array(this.gltf_group.armatureTransform).buffer;
+        this.device.queue.writeBuffer(this.compSkeletonInfoBuffer, 0, skeletonInfoData1);
+        this.device.queue.writeBuffer(this.compSkeletonInfoBuffer, 4 * Float32Array.BYTES_PER_ELEMENT, skeletonInfoData2);
+
+        var rootIdxData =  new Int32Array (this.gltf_group.skRootIndices).buffer;
+        this.device.queue.writeBuffer(this.rootIdxBuffer, 0, rootIdxData);
+
+        var parentIdxData = new Int32Array(this.gltf_group.jtParentIndices).buffer;
+        this.device.queue.writeBuffer(this.parentIdxBuffer, 0, parentIdxData);
+
+        var layerArrayData = new Int32Array(this.gltf_group.jtLayerArray).buffer;
+        this.device.queue.writeBuffer(this.layerArrayBuffer, 0, layerArrayData);
+
+        this.skeletonBindGroupLayout = this.device.createBindGroupLayout
+        ({
+            label: `Skeleton BindGroupLayout`,
+            entries: 
+            [
+            {
+                binding: 0, // skeleton info
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'read-only-storage'},
+            },
+            {
+                binding: 1, // skeleton rootIndices
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'read-only-storage'},
+            },
+            {
+                binding: 2, // joint parentIndices
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'read-only-storage'},
+            },
+            {
+                binding: 3, // layer array
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'read-only-storage'},
+            },
+            {
+                binding: 4, // joints
+                visibility: GPUShaderStage.COMPUTE,
+                buffer:{type: 'storage'},
+            }
+        ],
+        });
+
+        //for one now
+        const jointsBufferSize = numSkeleton * Float32Array.BYTES_PER_ELEMENT * this.gltf_group.skeletons[0].joints.length * 20; //(4 + 4 + 4 + 8)
+        //each single joint
+        const jointBufferSize = Float32Array.BYTES_PER_ELEMENT * 20;
+        
+        
+        this.jointsTRSBuffer = this.device.createBuffer({
+            size: jointsBufferSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        })
+        for(var i = 0; i < this.gltf_group.skeletons[0].joints.length; i++) {
+            
+            let jointArrayBuffer = new ArrayBuffer(jointBufferSize);
+            // add each joint into the buffer
+            let translate = new Float32Array(jointArrayBuffer, 0, 4);
+            
+            let rotation = new Float32Array(jointArrayBuffer, 4 * Float32Array.BYTES_PER_ELEMENT, 4);
+            
+            let scale = new Float32Array(jointArrayBuffer, 8 * Float32Array.BYTES_PER_ELEMENT, 4);
+            
+            let children = new Float32Array(jointArrayBuffer, 12 * Float32Array.BYTES_PER_ELEMENT, 8);
+
+            translate.set(this.gltf_group.skeletons[0].joints[i].translate);
+            rotation.set(this.gltf_group.skeletons[0].joints[i].rotate);
+            scale.set(this.gltf_group.skeletons[0].joints[i].scale);
+
+            for(var j = 0; j < 8; j++) {
+                if(j >= this.gltf_group.skeletons[0].joints[i].children.length) {
+                    children[j] = -1;
+                } else {
+                    children[j] = this.gltf_group.skeletons[0].joints[i].children[j]; 
+                }
+            }
+
+            this.device.queue.writeBuffer(this.jointsTRSBuffer, i * 20 * Float32Array.BYTES_PER_ELEMENT, jointArrayBuffer);
+        }
+        
+        this.skeletonBindGroup = this.device.createBindGroup
+        ({
+            label: `Skeleton BindGroup`,
+            layout: this.skeletonBindGroupLayout,
+            entries: 
+            [{
+                binding: 0, // skeleton info
+                resource: { buffer: this.compSkeletonInfoBuffer },
+            },{
+                binding: 1, // skeleton root indices
+                resource: { buffer: this.rootIdxBuffer },
+            },
+            {
+                binding: 2, // joint parent indices
+                resource: { buffer: this.parentIdxBuffer },
+            },
+            {
+                binding: 3, // joint parent indices
+                resource: { buffer: this.layerArrayBuffer },
+            },
+            {
+                binding: 4, // TRS Children
+                resource: { buffer: this.jointsTRSBuffer },
+            }
+            ],
+        });
+    }
+
     async loadGPUBuffers()
     {     
         // Mark GPUBufferUsage by accessor for each bufferview 
@@ -436,6 +679,17 @@ export default class GltfRenderer
             });
         }
         return this.fragShaderModule;
+    }
+
+    getComputeShaderModule() {
+        if (!this.compShaderModule)
+        {
+            this.compShaderModule = this.device.createShaderModule({
+                label: 'glTF compute shader module',
+                code : compShaderCode
+            });
+        }
+        return this.compShaderModule;
     }
 
     setupMeshNodeBindGroup(node : GLTFSpace.Node)
@@ -634,6 +888,25 @@ export default class GltfRenderer
         };
 
         this.commandEncoder = this.device.createCommandEncoder();
+
+        //let transformationMatrixData  =  new Float32Array (this.gltf_group.transforms[0]).buffer;
+
+        //this.device.queue.writeBuffer(this.computeBuffer, 0, transformationMatrixData);
+
+        const d = new Date();
+        let time = d.getTime();
+        const uniformTime = new Float32Array([0]);
+        uniformTime[0] = time / 1000;
+        //console.log(time / 1000000000);
+        this.device.queue.writeBuffer(this.timeBuffer, 0, uniformTime.buffer);
+
+        //compute shader first
+        this.computepassEncoder = this.commandEncoder.beginComputePass();
+        this.computepassEncoder.setPipeline(this.computePipeline);
+        this.computepassEncoder.setBindGroup(0, this.computeBindGroup);
+        this.computepassEncoder.setBindGroup(1, this.skeletonBindGroup);
+        this.computepassEncoder.dispatchWorkgroups(1);
+        this.computepassEncoder.end();
 
         // Render pass
         this.passEncoder = this.commandEncoder.beginRenderPass(renderPassDesc);
