@@ -93,6 +93,38 @@ fn getJointMatrix(joint : Joint) -> mat4x4<f32>
     return t * r * s;
 }
 
+fn getTranslationMatrix(trans: mat4x4<f32>) -> mat4x4<f32>
+{
+    return mat4x4<f32>(vec4<f32>(1, 0, 0, 0), vec4<f32>( 0, 1, 0, 0), vec4<f32>(0, 0, 1, 0), vec4<f32>(trans[3][0], trans[3][1], trans[3][2], 1)); 
+}
+
+fn getScaleAndRotationMatrix(t: mat4x4<f32>) -> mat4x4<f32>
+{
+    var sx = sqrt(t[0][0] * t[0][0] + t[0][1] * t[0][1] + t[0][2] * t[0][2]);
+    var sy = sqrt(t[1][0] * t[1][0] + t[1][1] * t[1][1] + t[1][2] * t[1][2]);
+    var sz = sqrt(t[2][0] * t[2][0] + t[2][1] * t[2][1] + t[2][2] * t[2][2]);
+    var scale = mat4x4<f32>(vec4<f32>(sx, 0, 0, 0), 
+                            vec4<f32>(0, sy, 0, 0), 
+                            vec4<f32>(0, 0, sz, 0), 
+                            vec4<f32>(0, 0, 0, 1)); 
+
+    var res = mat4x4<f32>( vec4<f32>(t[0][0]/sx,t[0][1]/sx,t[0][2]/sx,0),
+                                vec4<f32>(t[1][0]/sy,t[1][1]/sy,t[1][2]/sy,0),
+                                vec4<f32>(t[2][0]/sz,t[2][1]/sz,t[2][2]/sz,0),
+                                vec4<f32>(sx,  sy,  sz,  1));
+
+    //jointTransforms: array<mat4x4<f32>> =[scale, rotation] 
+    return res;
+}
+
+fn translate(t: mat4x4<f32>, x: f32, y: f32, z: f32) -> mat4x4<f32>{
+    var res = t;
+    res[3][0] = res[3][0] + x;
+    res[3][1] = res[3][1] + x;
+    res[3][2] = res[3][2] + x;
+    return res;
+}
+
 fn flapWings()
 {
   var speed = 3.0;
@@ -118,10 +150,36 @@ fn flapWings()
 fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) 
 {
   //matrices are all column major !!!
+  var m = transform[0];
+  var m_translate = getTranslationMatrix(m);
+  var m_rotation = getScaleAndRotationMatrix(m);
+  
+  var sx = m_rotation[3][0];
+  var sy = m_rotation[3][1]; 
+  var sz = m_rotation[3][2];
+
+  var m_scale = mat4x4<f32>(vec4<f32>(sx, 0, 0, 0), 
+                            vec4<f32>(0, sy, 0, 0), 
+                            vec4<f32>(0, 0, sz, 0), 
+                            vec4<f32>(0, 0, 0, 1)); 
+
+  m_rotation[3][0] = 0;
+  m_rotation[3][1] = 0; 
+  m_rotation[3][2] = 0;
+
+  m_translate = translate(m_translate, 0.01, 0.02, 0.03);
+  m[3][0] = m[3][0] + 5;
+
+  //m = m_translate * m_rotation * m_scale;
+
+  transform[0] = m;
+
+
+
 
   //Joint animation here
   flapWings();
-
+  
   // Update joints layer by layer
   var currLayer = 0;
   var layerSize = i32(skeletonInfo.layerArrSize);
