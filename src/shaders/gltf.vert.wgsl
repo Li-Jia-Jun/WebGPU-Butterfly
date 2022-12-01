@@ -26,17 +26,19 @@ struct VertexInput
     @location(0) position : vec3<f32>,
     @location(1) normal : vec3<f32>,
 
-    //@location(2) texcoord : vec2<f32>,
 
     // Joints
     @location(2) joints: vec4<u32>,
-    @location(3) jointweights: vec4<f32>
+    @location(3) jointweights: vec4<f32>,
+
+    @location(4) texcoord : vec2<f32>,
 };
 
 struct VertexOutput 
 {
     @builtin(position) position : vec4<f32>,
     @location(0) normal : vec3<f32>,
+    @location(1) texcoord: vec2<f32>,
 };
 
 
@@ -62,6 +64,7 @@ fn vertexMain(input : VertexInput, @builtin(instance_index) instance : u32) -> V
         var worldPos = instanceMatrics[instance] * modelPos;
         output.position = camera.projection * camera.view * worldPos;
         output.normal = normalize((camera.view * instanceMatrics[instance] * jointMatrix * vec4(input.normal, 0.0)).xyz);
+        output.texcoord = input.texcoord;
         return output;
     }
     else
@@ -69,6 +72,7 @@ fn vertexMain(input : VertexInput, @builtin(instance_index) instance : u32) -> V
         var worldPos = instanceMatrics[instance] * modelPos;
         output.position = camera.projection * camera.view * worldPos;
         output.normal = normalize((camera.view * instanceMatrics[instance] * modelMatrix * vec4(input.normal, 0.0)).xyz);
+        output.texcoord = input.texcoord;
         return output;
     }
 }

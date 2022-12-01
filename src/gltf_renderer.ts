@@ -13,9 +13,9 @@ const ShaderLocations : Map<string, number> = new Map
 ([
     ['POSITION', 0],
     ['NORMAL', 1],
-    // TEXCOORD_0: 2,
     ['JOINTS_0', 2],
-    ['WEIGHTS_0', 3]
+    ['WEIGHTS_0', 3],
+    ['TEXCOORD_0', 4],
 ]);
 
 // Store Primitive GPUBuffer
@@ -68,8 +68,13 @@ export default class GltfRenderer
     // Constant Bind Group
     jointInfoBuffer : GPUBuffer;
     inverseBindMatrixBuffer : GPUBuffer;
+    textureImage: GPUTexture;
+    textureSampler: GPUSampler;
+
     constantBindGroupLayout: GPUBindGroupLayout;
     constantBindGroup : GPUBindGroup;
+
+
 
     // Pipeline
     gltfPipelineLayout : GPUPipelineLayout;
@@ -145,7 +150,7 @@ export default class GltfRenderer
         await this.loadGPUBuffers();
 
         // Bind Groups
-        this.initConstantBindGroup();
+        await this.initConstantBindGroup();
         this.initFrameBindGroup();
         this.initNodeBindGroup();
         this.initComputeBindGroup();
@@ -305,7 +310,7 @@ export default class GltfRenderer
         }
     }
 
-    initConstantBindGroup()
+    async initConstantBindGroup()
     {
         const hasJoint = this.gltf_group.gltf.skins !== undefined ? 1 : 0;
         const jointNum = hasJoint ? this.gltf_group.gltf.skins[0].joints.length : 0;
@@ -339,6 +344,112 @@ export default class GltfRenderer
             });
         }
 
+        const hasSampler = this.gltf_group.gltf.samplers[0] !== undefined ? 1:0;
+        if (hasSampler)
+        {
+            console.log("Sampler", this.gltf_group.gltf.samplers[0]);
+            let sampler = this.gltf_group.gltf.samplers[0];
+
+            function gpuAddressModeForWrap(wrap) {
+                switch (wrap) {
+                  case WebGLRenderingContext.CLAMP_TO_EDGE: return 'clamp-to-edge';
+                  case WebGLRenderingContext.MIRRORED_REPEAT: return 'mirror-repeat';
+                  default: return 'repeat';
+                }
+              }
+
+                var descriptor:GPUSamplerDescriptor = {
+                  addressModeU: gpuAddressModeForWrap(sampler.wrapS),
+                  addressModeV: gpuAddressModeForWrap(sampler.wrapT),
+                  magFilter: 'linear',
+                  minFilter: 'linear',
+                  mipmapFilter: 'linear',
+                };
+            
+              // WebGPU's default min/mag/mipmap filtering is nearest, se we only have to override it if we
+              // want linear filtering for some aspect.
+              if (!sampler.magFilter || sampler.magFilter == WebGLRenderingContext.LINEAR) {
+                descriptor.magFilter = 'linear';
+              }
+            
+              switch (sampler.minFilter) {
+                case WebGLRenderingContext.NEAREST:
+                  break;
+                case WebGLRenderingContext.LINEAR:
+                case WebGLRenderingContext.LINEAR_MIPMAP_NEAREST:
+                  descriptor.minFilter = 'linear';
+                  break;
+                case WebGLRenderingContext.NEAREST_MIPMAP_LINEAR:
+                  descriptor.mipmapFilter = 'linear';
+                  break;
+                case WebGLRenderingContext.LINEAR_MIPMAP_LINEAR:
+                default:
+                  descriptor.minFilter = 'linear';
+                  descriptor.mipmapFilter = 'linear';
+                  break;
+              }
+              this.textureSampler = this.device.createSampler(descriptor);
+        }
+        else
+        {
+            console.log("Default Sampler used");
+            this.textureSampler = this.device.createSampler(
+                {
+                    addressModeU: 'repeat',
+                    addressModeV: 'repeat',
+                    magFilter: 'linear',
+                    minFilter: 'linear',
+                    mipmapFilter: 'linear',
+                }
+            )
+        }
+
+        const hasImage = this.gltf_group.gltf.images[0] !== undefined ? 1 : 0;
+        if (hasImage)
+        {
+            //console.log(this.gltf_group.gltf.images[0]);
+            // this.loadImage(this.gltf_group.gltf, this.gltf_group.gltf.images[0]).
+            // then(value => this.extractImgBitMap(value, this));            
+            let image = this.gltf_group.gltf.images[0];
+            let gltf = this.gltf_group.gltf;
+
+            let blob;
+            if (image.uri) {
+                // Image is given as a URI
+                const response = await fetch(image.uri);
+                blob = await response.blob();
+              } 
+              else {
+                // Image is given as a bufferView.
+                const bufferView = gltf.bufferViews[image.bufferView];
+                //console.log(bufferView);
+                const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
+                //console.log(buffer);
+                blob = new Blob(
+                  [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
+                  { type: image.mimeType }
+                );
+              }
+            const imgBitmap = await createImageBitmap(blob);
+
+            this.textureImage = this.device.createTexture
+            ({
+                size: { width: imgBitmap.width, height: imgBitmap.height },
+                format: 'rgba8unorm',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+            });
+            this.device.queue.copyExternalImageToTexture(
+            { source: imgBitmap },
+            { texture: this.textureImage },
+            [imgBitmap.width, imgBitmap.height]
+            );
+        }
+        else    // if no texture image, create an empty buffer
+        {
+        }
+        
+        console.log("Texture, sampler loading", this.textureImage,this.textureSampler);
+
         this.constantBindGroupLayout = this.device.createBindGroupLayout
         ({
             label: `Constant BindGroupLayout`,
@@ -352,8 +463,20 @@ export default class GltfRenderer
                 binding: 1,
                 visibility: GPUShaderStage.VERTEX,
                 buffer: {type: 'read-only-storage'}
-            }]
+            },
+            {
+                binding: 2,
+                visibility: GPUShaderStage.FRAGMENT,
+                sampler: {}
+            },
+            {
+                binding: 3,
+                visibility: GPUShaderStage.FRAGMENT,
+                texture: {}
+            }
+        ]
         });
+
         this.constantBindGroup = this.device.createBindGroup
         ({
             label: `Constant BindGroup`,
@@ -366,7 +489,16 @@ export default class GltfRenderer
             {
                 binding: 1,
                 resource: {buffer: this.inverseBindMatrixBuffer}
-            }]
+            },
+            {
+                binding: 2,
+                resource: this.textureSampler,
+            },
+            {
+                binding: 3,
+                resource: this.textureImage.createView(),
+            }
+        ]
         });
     }
 
@@ -421,8 +553,6 @@ export default class GltfRenderer
             },
             ],
         });
-
-        
     }
 
     initSkeletonsBindGroup() {
@@ -579,6 +709,36 @@ export default class GltfRenderer
 
             this.device.queue.writeBuffer(buffer, offset + i * 20 * Float32Array.BYTES_PER_ELEMENT, jointArrayBuffer);
         }
+    }
+    async loadImage(gltf, image)
+    {
+        let blob;
+        if (image.uri) {
+            // Image is given as a URI
+            const response = await fetch(image.uri);
+            blob = await response.blob();
+          } else {
+            // Image is given as a bufferView.
+            const bufferView = gltf.bufferViews[image.bufferView];
+            console.log(bufferView);
+            const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
+            console.log(buffer);
+            blob = new Blob(
+              [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
+              { type: image.mimeType }
+            );
+          }
+        const imgBitmap = await createImageBitmap(blob);
+        return imgBitmap;
+    }
+
+    async getArrayBufferForGltfBuffer(bufferView)
+    {   
+        let wholeArray = new Uint8Array(10);
+        await this.gltf_group.asset.bufferData.get(0).then((value) => {wholeArray = value;}); // Load buffer data from gltf
+
+        let subArray = wholeArray.subarray(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
+        return subArray;
     }
 
     async loadGPUBuffers()
