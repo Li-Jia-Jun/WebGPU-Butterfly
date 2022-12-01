@@ -127,7 +127,7 @@ fn translate(t: mat4x4<f32>, x: f32, y: f32, z: f32) -> mat4x4<f32>{
 
 fn flapWings()
 {
-  var speed = 3.0;
+  var speed = 6.0;
 
   var jointIndex = 8; // Bone.009
   var defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
@@ -151,24 +151,25 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
 {
   //matrices are all column major !!!
   var m = transform[0];
-  var m_translate = getTranslationMatrix(m);
-  var m_rotation = getScaleAndRotationMatrix(m);
+  // var m_translate = getTranslationMatrix(m);
+  // var m_rotation = getScaleAndRotationMatrix(m);
   
-  var sx = m_rotation[3][0];
-  var sy = m_rotation[3][1]; 
-  var sz = m_rotation[3][2];
+  // var sx = m_rotation[3][0];
+  // var sy = m_rotation[3][1]; 
+  // var sz = m_rotation[3][2];
 
-  var m_scale = mat4x4<f32>(vec4<f32>(sx, 0, 0, 0), 
-                            vec4<f32>(0, sy, 0, 0), 
-                            vec4<f32>(0, 0, sz, 0), 
-                            vec4<f32>(0, 0, 0, 1)); 
+  // var m_scale = mat4x4<f32>(vec4<f32>(sx, 0, 0, 0), 
+  //                           vec4<f32>(0, sy, 0, 0), 
+  //                           vec4<f32>(0, 0, sz, 0), 
+  //                           vec4<f32>(0, 0, 0, 1)); 
 
-  m_rotation[3][0] = 0;
-  m_rotation[3][1] = 0; 
-  m_rotation[3][2] = 0;
+  // m_rotation[3][0] = 0;
+  // m_rotation[3][1] = 0; 
+  // m_rotation[3][2] = 0;
 
-  m_translate = translate(m_translate, 0.01, 0.02, 0.03);
-  m[3][0] = m[3][0] + 5;
+  // m_translate = translate(m_translate, 0.01, 0.02, 0.03);
+  m[3][2] = m[3][2] - 0.05;
+  m[3][1] = m[3][1] + 0.03;
 
   //m = m_translate * m_rotation * m_scale;
 
