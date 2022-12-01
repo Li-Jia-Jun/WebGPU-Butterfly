@@ -436,7 +436,7 @@ export default class GltfRenderer
             ({
                 size: { width: imgBitmap.width, height: imgBitmap.height },
                 format: 'rgba8unorm',
-                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
             });
             this.device.queue.copyExternalImageToTexture(
             { source: imgBitmap },
