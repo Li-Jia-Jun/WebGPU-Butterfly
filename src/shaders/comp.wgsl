@@ -12,6 +12,14 @@ struct Joints {
   joints : array<Joint>,
 }
 
+// struct Velocity {
+//   velocity: vec3<f32>
+// }
+
+struct Velocities {
+  velocities:  array<vec3<f32>>
+}
+
 struct Time {
     value : f32,
 }
@@ -31,16 +39,17 @@ struct SkeletonInfo
 
 //model transformation matrix (The world position output)
 @group(0) @binding(0) var<storage, read_write> transform : array<mat4x4<f32>>;
-@group(0) @binding(1) var<storage> time: Time;
+@group(0) @binding(1) var<uniform> time: Time;
 //joint transformation matrix (The joint pose output)
 @group(0) @binding(2) var<storage, read_write> jointTransforms: array<mat4x4<f32>>;
+@group(0) @binding(3) var<storage, read_write> velocitiesData: array<vec3<f32>>;
 
 //skeleton information
 @group(1) @binding(0) var<storage> skeletonInfo: SkeletonInfo;
 @group(1) @binding(1) var<storage> skRootIndices: array<i32>;  // Size == SkeletonInfo.rootJointNum
 @group(1) @binding(2) var<storage> jtParentIndices: array<i32>;// Size == SkeletonInfo.jointNum
 @group(1) @binding(3) var<storage> skLayerArray: array<i32>;   // Size == SkeletonInfo.layerArrSize
-@group(1) @binding(4) var<storage, read_write> data: Joints;
+@group(1) @binding(4) var<storage, read_write> jointsData: Joints;
 
 
 
@@ -120,8 +129,8 @@ fn getScaleAndRotationMatrix(t: mat4x4<f32>) -> mat4x4<f32>
 fn translate(t: mat4x4<f32>, x: f32, y: f32, z: f32) -> mat4x4<f32>{
     var res = t;
     res[3][0] = res[3][0] + x;
-    res[3][1] = res[3][1] + x;
-    res[3][2] = res[3][2] + x;
+    res[3][1] = res[3][1] + y;
+    res[3][2] = res[3][2] + z;
     return res;
 }
 
@@ -131,52 +140,71 @@ fn flapWings()
 
   var jointIndex = 8; // Bone.009
   var defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  data.joints[jointIndex].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed), 0, 0);
+  jointsData.joints[jointIndex].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed), 0, 0);
 
   jointIndex = 15; // Bone.004
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  data.joints[jointIndex].rotate = defaultRot - vec4(0, 25 * sin(time.value * speed), 0, 0);
+  jointsData.joints[jointIndex].rotate = defaultRot - vec4(0, 25 * sin(time.value * speed), 0, 0);
 
   jointIndex = 19; // Bone.019
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  data.joints[jointIndex].rotate = defaultRot - vec4(0, 30 * sin(time.value * speed), 0, 0);
+  jointsData.joints[jointIndex].rotate = defaultRot - vec4(0, 30 * sin(time.value * speed), 0, 0);
 
   jointIndex = 26; // Bone.026
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  data.joints[jointIndex].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed), 0, 0);
+  jointsData.joints[jointIndex].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed), 0, 0);
 }
+
+fn updateVelocity(v: vec3<f32>, force: vec3<f32>, dt: f32) -> vec3<f32>
+{
+    var res = v;
+    res = res + force* time.value * dt;
+    return res;
+}
+
 
 @compute @workgroup_size(1)
 fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) 
 {
-  //matrices are all column major !!!
+  const deltaTime = 0.01;
+
+  //model matrix transformation
   var m = transform[0];
-  // var m_translate = getTranslationMatrix(m);
-  // var m_rotation = getScaleAndRotationMatrix(m);
+
+  var m_translate = getTranslationMatrix(m);
+  var m_rotation = getScaleAndRotationMatrix(m);
   
-  // var sx = m_rotation[3][0];
-  // var sy = m_rotation[3][1]; 
-  // var sz = m_rotation[3][2];
+  var sx = m_rotation[3][0];
+  var sy = m_rotation[3][1]; 
+  var sz = m_rotation[3][2];
 
-  // var m_scale = mat4x4<f32>(vec4<f32>(sx, 0, 0, 0), 
-  //                           vec4<f32>(0, sy, 0, 0), 
-  //                           vec4<f32>(0, 0, sz, 0), 
-  //                           vec4<f32>(0, 0, 0, 1)); 
+  var m_scale = mat4x4<f32>(vec4<f32>(sx, 0, 0, 0), 
+                            vec4<f32>(0, sy, 0, 0), 
+                            vec4<f32>(0, 0, sz, 0), 
+                            vec4<f32>(0, 0, 0, 1)); 
 
-  // m_rotation[3][0] = 0;
-  // m_rotation[3][1] = 0; 
-  // m_rotation[3][2] = 0;
+  m_rotation[3][0] = 0;
+  m_rotation[3][1] = 0; 
+  m_rotation[3][2] = 0;
 
-  // m_translate = translate(m_translate, 0.01, 0.02, 0.03);
-  m[3][2] = m[3][2] - 0.05;
-  m[3][1] = m[3][1] + 0.03;
+  var force = vec3<f32>(0, -0.098, 0);
 
-  //m = m_translate * m_rotation * m_scale;
+  var velocity = velocitiesData[0];
 
+  velocity = updateVelocity(velocity, force, deltaTime);
+  velocitiesData[0] = velocity;
+
+  
+  m_translate = translate(m_translate, velocity.x, velocity.y, velocity.z);
+
+  //x, y, z rotation
+  var rot = vec4<f32>(0, 0, 0, 0);
+  var localRotationMatrix = eulerToRotationMatrix(rot);
+  m_rotation = localRotationMatrix * m_rotation;
+
+  m = m_translate * m_rotation * m_scale;
   transform[0] = m;
-
-
-
+//======================================================================================//
 
   //Joint animation here
   flapWings();
@@ -196,7 +224,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
     // For first layer (root joints), its transform matrix comes from its TRS directly
     if(currLayer == 0)
     {
-      jointTransforms[jointIndex] = skeletonInfo.armatrureTransform * getJointMatrix(data.joints[jointIndex]);
+      jointTransforms[jointIndex] = skeletonInfo.armatrureTransform * getJointMatrix(jointsData.joints[jointIndex]);
       continue;
     }
 
@@ -205,7 +233,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
     var parentIndex = jtParentIndices[jointIndex];
     var parentTransform = jointTransforms[parentIndex];
     
-    var thisTransform = getJointMatrix(data.joints[jointIndex]);
+    var thisTransform = getJointMatrix(jointsData.joints[jointIndex]);
     
     jointTransforms[jointIndex] = parentTransform * thisTransform;
   } 

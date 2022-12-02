@@ -122,11 +122,11 @@ export default class GLTFGroup
     skeletons : Skeleton[];
 
     transforms : mat4[];
+    velocity: vec3[];           // velocity vectors to pass
     names : string[];
     instanceCount;
 
     hasJoint : boolean;
-
     jointsMap : Map<string, number>; // Map of joint name and its index in GLTF (not node index)
     
     constructor(){}
@@ -160,8 +160,18 @@ export default class GLTFGroup
             this.#calcNodeMatrix(index, node, defaultTransform, false);
         }
 
+        this.initVelocity();
         this.#printAnything();
     }
+
+    initVelocity() {
+        this.velocity = new Array();
+        for(let i = 0; i < this.instanceCount; i++) {
+            var v = vec3.fromValues(0, 0, 0);
+            this.velocity.push(v);
+        }
+    }
+
 
     #initSkeletons()
     {

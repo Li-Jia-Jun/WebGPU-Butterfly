@@ -110,6 +110,7 @@ export default class GltfRenderer
 
     //time
     timeBuffer: GPUBuffer;
+    velocityBuffer: GPUBuffer;
     // Web stuff
     canvas : HTMLCanvasElement;
 
@@ -519,10 +520,15 @@ export default class GltfRenderer
             {
                 binding: 1, // time
                 visibility: GPUShaderStage.COMPUTE,
-                buffer: {type: 'read-only-storage'},
+                buffer: {type: 'uniform'},
             },
             {
                 binding: 2, // joint transformation matrix
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {type: 'storage'},
+            },
+            {
+                binding: 3,
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: {type: 'storage'},
             }
@@ -532,8 +538,16 @@ export default class GltfRenderer
         this.timeBuffer = this.device.createBuffer
         ({            
             size: Float32Array.BYTES_PER_ELEMENT,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
+
+        this.velocityBuffer = this.device.createBuffer
+        ({
+            size:3 * Float32Array.BYTES_PER_ELEMENT * this.gltf_group.instanceCount,
+            usage:GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        })
+
+        this.setVelocityBuffer();
         
         this.computeBindGroup = this.device.createBindGroup
         ({
@@ -552,6 +566,10 @@ export default class GltfRenderer
                 binding: 2, // joint transformation matrix
                 resource: { buffer: this.jointTransformBuffer},
             },
+            {
+                binding: 3, //instance velocity 
+                resource: { buffer: this.velocityBuffer} 
+            }
             ],
         });
     }
@@ -1146,6 +1164,16 @@ export default class GltfRenderer
         }
 
         this.device.queue.writeBuffer(this.instanceBuffer, 0, instanceArrayBuffer);
+    }
+
+    setVelocityBuffer() {
+        var velocityArrayBuffer = new ArrayBuffer(3 * this.gltf_group.instanceCount * Float32Array.BYTES_PER_ELEMENT);
+        for(let i = 0; i < this.gltf_group.instanceCount; i++) {
+            let st = i * 3 * Float32Array.BYTES_PER_ELEMENT;
+            let arr = new Float32Array(velocityArrayBuffer, st, 3);
+            arr.set(this.gltf_group.velocity[i]);
+        }
+        this.device.queue.writeBuffer(this.velocityBuffer, 0, velocityArrayBuffer);
     }
 }
 
