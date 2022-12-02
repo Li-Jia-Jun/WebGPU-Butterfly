@@ -210,7 +210,7 @@ export default class GltfRenderer
             size: 16 * instanceNum * Float32Array.BYTES_PER_ELEMENT,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
         });
-        this.updateInstanceBuffer();
+        this.setInstanceBuffer();
 
         // Joint Transforms
         const hasJoint = this.gltf_group.gltf.skins !== undefined;
@@ -1135,7 +1135,7 @@ export default class GltfRenderer
         this.device.queue.writeBuffer(this.timeBuffer, 0, timeArrayBffer);
     }
 
-    updateInstanceBuffer()
+    setInstanceBuffer()
     {
         let instanceArrayBuffer = new ArrayBuffer(16 * this.gltf_group.instanceCount * Float32Array.BYTES_PER_ELEMENT);
         for(let[index, mat] of this.gltf_group.transforms.entries())
@@ -1146,11 +1146,6 @@ export default class GltfRenderer
         }
 
         this.device.queue.writeBuffer(this.instanceBuffer, 0, instanceArrayBuffer);
-    }
-
-    updateJointTransformBuffer()
-    {
-        
     }
 }
 

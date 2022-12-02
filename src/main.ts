@@ -221,11 +221,7 @@ export default class Application
         this.updateFrameData(timestamp);
         
         // Render
-        this.renderer_butterfly.updateInstanceBuffer();
         this.renderer_butterfly.renderGLTF();  
-
-        // this.renderer_figure.updateInstanceBuffer();
-        // this.renderer_figure.renderGLTF();  
 
         // Update HTML display
         this.updateDisplay();
