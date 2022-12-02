@@ -126,15 +126,14 @@ export default class Application
             this.renderer_butterfly = new GltfRenderer();
             await this.renderer_butterfly.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_butterfly, this.depthTexture, this.depthTextureView, true);
             
-            await this.gltf_scene.init(
-                'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-done.gltf',
+            // await this.gltf_scene.init(
+            //     'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene.gltf',
+            //     1,
+            //     ['Scene'],
+            //     [mat4.fromValues(1.5,0,0,0, 0,1.5,0,0, 0,0,1.5,0, 0,0,0,1)]);
 
-                1,
-                ['Scene'],
-                [mat4.fromValues(1.5,0,0,0, 0,1.5,0,0, 0,0,1.5,0, 0,0,0,1)]);
-
-            this.renderer_scene= new GltfRenderer();
-            await this.renderer_scene.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_scene, this.depthTexture, this.depthTextureView, true);
+            // this.renderer_scene= new GltfRenderer();
+            // await this.renderer_scene.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_scene, this.depthTexture, this.depthTextureView, true);
 
 
             // // Rigged Figure
