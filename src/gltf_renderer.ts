@@ -390,6 +390,7 @@ export default class GltfRenderer
               }
               this.textureSampler = this.device.createSampler(descriptor);
         }
+        // If no sampler specified, use the default configuration
         else
         {
             console.log("Default Sampler used");
@@ -410,7 +411,7 @@ export default class GltfRenderer
             //console.log(this.gltf_group.gltf.images[0]);
             // this.loadImage(this.gltf_group.gltf, this.gltf_group.gltf.images[0]).
             // then(value => this.extractImgBitMap(value, this));            
-            let image = this.gltf_group.gltf.images[0];
+            let image = this.gltf_group.gltf.images[1];
             let gltf = this.gltf_group.gltf;
 
             let blob;
