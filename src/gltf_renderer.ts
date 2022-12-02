@@ -68,7 +68,10 @@ export default class GltfRenderer
     // Constant Bind Group
     jointInfoBuffer : GPUBuffer;
     inverseBindMatrixBuffer : GPUBuffer;
-    textureImage: GPUTexture;
+    
+    baseColorTexture: GPUTexture;
+    normalTexture: GPUTexture;
+    metallicRoughnessTexture: GPUTexture;
     textureSampler: GPUSampler;
 
     constantBindGroupLayout: GPUBindGroupLayout;
@@ -344,6 +347,21 @@ export default class GltfRenderer
             });
         }
 
+        let material = this.gltf_group.gltf.materials;
+        let textures = this.gltf_group.gltf.textures;
+        console.log("Material info: ", material);
+        console.log("Material info: ", material[0].normalTexture);
+        console.log("Material info: ", material[0].pbrMetallicRoughness.metallicRoughnessTexture);
+        console.log("Material info: ", material[0].pbrMetallicRoughness.baseColorTexture);
+        console.log("Material info: ", material[0].pbrMetallicRoughness.roughnessFactor);
+        console.log("Material info: ", material[0].pbrMetallicRoughness.metallicFactor);
+        let baseColorTextureIdx = material[0].pbrMetallicRoughness.baseColorTexture.index;
+        let normalTextureIdx = material[0].normalTexture.index;
+        let metallicRoughnessTextureIdx = material[0].pbrMetallicRoughness.metallicRoughnessTexture.index;
+
+
+
+        //console.log("Texture info: ", texture, texture.length);
         const hasSampler = this.gltf_group.gltf.samplers[0] !== undefined ? 1:0;
         if (hasSampler)
         {
@@ -404,36 +422,30 @@ export default class GltfRenderer
                 }
             )
         }
-
-        const hasImage = this.gltf_group.gltf.images[0] !== undefined ? 1 : 0;
-        if (hasImage)
-        {
-            //console.log(this.gltf_group.gltf.images[0]);
-            // this.loadImage(this.gltf_group.gltf, this.gltf_group.gltf.images[0]).
-            // then(value => this.extractImgBitMap(value, this));            
-            let image = this.gltf_group.gltf.images[1];
+         
             let gltf = this.gltf_group.gltf;
 
+            // Base Color Texture
+            let baseColorTexture = this.gltf_group.gltf.images[baseColorTextureIdx];
             let blob;
-            if (image.uri) {
+            if (baseColorTexture.uri) {
                 // Image is given as a URI
-                const response = await fetch(image.uri);
+                const response = await fetch(baseColorTexture.uri);
                 blob = await response.blob();
               } 
               else {
                 // Image is given as a bufferView.
-                const bufferView = gltf.bufferViews[image.bufferView];
+                const bufferView = gltf.bufferViews[baseColorTexture.bufferView];
                 //console.log(bufferView);
                 const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
                 //console.log(buffer);
                 blob = new Blob(
                   [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
-                  { type: image.mimeType }
+                  { type: baseColorTexture.mimeType }
                 );
               }
-            const imgBitmap = await createImageBitmap(blob);
-
-            this.textureImage = this.device.createTexture
+            let imgBitmap = await createImageBitmap(blob);
+            this.baseColorTexture = this.device.createTexture
             ({
                 size: { width: imgBitmap.width, height: imgBitmap.height },
                 format: 'rgba8unorm',
@@ -441,15 +453,75 @@ export default class GltfRenderer
             });
             this.device.queue.copyExternalImageToTexture(
             { source: imgBitmap },
-            { texture: this.textureImage },
+            { texture: this.baseColorTexture },
             [imgBitmap.width, imgBitmap.height]
             );
-        }
-        else    // if no texture image, create an empty buffer
-        {
-        }
-        
-        console.log("Texture, sampler loading", this.textureImage,this.textureSampler);
+
+            // Normal
+            let normalTexture = this.gltf_group.gltf.images[normalTextureIdx];
+            //let blob;
+            if (normalTexture.uri) {
+                // Image is given as a URI
+                const response = await fetch(normalTexture.uri);
+                blob = await response.blob();
+              } 
+              else {
+                // Image is given as a bufferView.
+                const bufferView = gltf.bufferViews[normalTexture.bufferView];
+                //console.log(bufferView);
+                const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
+                //console.log(buffer);
+                blob = new Blob(
+                  [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
+                  { type: normalTexture.mimeType }
+                );
+              }
+            imgBitmap = await createImageBitmap(blob);
+            this.normalTexture = this.device.createTexture
+            ({
+                size: { width: imgBitmap.width, height: imgBitmap.height },
+                format: 'rgba8unorm',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
+            });
+            this.device.queue.copyExternalImageToTexture(
+            { source: imgBitmap },
+            { texture: this.normalTexture },
+            [imgBitmap.width, imgBitmap.height]
+            );
+
+            // metallic and roughness
+            let metallicRoughnessTexture = this.gltf_group.gltf.images[metallicRoughnessTextureIdx];
+            //let blob;
+            if (metallicRoughnessTexture.uri) {
+                // Image is given as a URI
+                const response = await fetch(metallicRoughnessTexture.uri);
+                blob = await response.blob();
+                } 
+                else {
+                // Image is given as a bufferView.
+                const bufferView = gltf.bufferViews[metallicRoughnessTexture.bufferView];
+                //console.log(bufferView);
+                const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
+                //console.log(buffer);
+                blob = new Blob(
+                    [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
+                    { type: metallicRoughnessTexture.mimeType }
+                );
+                }
+            imgBitmap = await createImageBitmap(blob);
+            this.metallicRoughnessTexture = this.device.createTexture
+            ({
+                size: { width: imgBitmap.width, height: imgBitmap.height },
+                format: 'rgba8unorm',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
+            });
+            this.device.queue.copyExternalImageToTexture(
+            { source: imgBitmap },
+            { texture: this.metallicRoughnessTexture },
+            [imgBitmap.width, imgBitmap.height]
+            );
+
+
 
         this.constantBindGroupLayout = this.device.createBindGroupLayout
         ({
@@ -474,7 +546,17 @@ export default class GltfRenderer
                 binding: 3,
                 visibility: GPUShaderStage.FRAGMENT,
                 texture: {}
-            }
+            },
+            {
+                binding: 4,
+                visibility: GPUShaderStage.FRAGMENT,
+                texture: {}  
+            },
+            {
+                binding: 5,
+                visibility: GPUShaderStage.FRAGMENT,
+                texture: {}  
+            },
         ]
         });
 
@@ -497,7 +579,15 @@ export default class GltfRenderer
             },
             {
                 binding: 3,
-                resource: this.textureImage.createView(),
+                resource: this.baseColorTexture.createView(),
+            },
+            {
+                binding: 4,
+                resource: this.normalTexture.createView(),
+            },
+            {
+                binding: 5,
+                resource: this.metallicRoughnessTexture.createView(),
             }
         ]
         });
