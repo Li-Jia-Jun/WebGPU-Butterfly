@@ -136,22 +136,23 @@ fn translate(t: mat4x4<f32>, x: f32, y: f32, z: f32) -> mat4x4<f32>{
 
 fn flapWings(idx: u32)
 {
-  var speed = 6.0;
+  var speed = 8.0;
+
   var jointIndex = 8; // Bone.009
   var defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed + f32(idx)), 0, 0);
 
   jointIndex = 15; // Bone.004
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(0, 25 * sin(time.value * speed), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(0, 25 * sin(time.value * speed + f32(idx)), 0, 0);
 
   jointIndex = 19; // Bone.019
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(0, 30 * sin(time.value * speed), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(0, 30 * sin(time.value * speed + f32(idx)), 0, 0);
 
   jointIndex = 26; // Bone.026
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed + f32(idx)), 0, 0);
 }
 
 fn updateVelocity(v: vec3<f32>, force: vec3<f32>, dt: f32) -> vec3<f32>
