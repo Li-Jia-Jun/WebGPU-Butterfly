@@ -26,6 +26,9 @@ export default class Application
     renderer_butterfly : GltfRenderer;
     gltf_butterfly : GLTFGroup;
 
+    renderer_scene: GltfRenderer;
+    gltf_scene: GLTFGroup;
+
     renderer_figure : GltfRenderer;
     gltf_figure : GLTFGroup;
 
@@ -91,6 +94,8 @@ export default class Application
             let s : number = 1.5;
             this.gltf_butterfly = new GLTFGroup();
 
+            this.gltf_scene = new GLTFGroup();
+
             // create instancing name list and transform list
             let instance_name = [];
             let instance_trans = [];
@@ -120,6 +125,16 @@ export default class Application
 
             this.renderer_butterfly = new GltfRenderer();
             await this.renderer_butterfly.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_butterfly, this.depthTexture, this.depthTextureView, true);
+            
+            // await this.gltf_scene.init(
+            //     'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene.gltf',
+            //     1,
+            //     ['Scene'],
+            //     [mat4.fromValues(1.5,0,0,0, 0,1.5,0,0, 0,0,1.5,0, 0,0,0,1)]);
+
+            // this.renderer_scene= new GltfRenderer();
+            // await this.renderer_scene.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_scene, this.depthTexture, this.depthTextureView, true);
+
 
             // // Rigged Figure
             // let s2 : number = 3.0;

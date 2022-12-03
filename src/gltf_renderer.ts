@@ -354,14 +354,45 @@ export default class GltfRenderer
         let textures = this.gltf_group.gltf.textures;
         console.log("Material info: ", material);
         console.log("Material info: ", material[0].normalTexture);
+        
+        let hasNormalMap = material[0].normalTexture != undefined ? 1 : 0;
+        console.log("hasNormalMap: ", hasNormalMap);
+
         console.log("Material info: ", material[0].pbrMetallicRoughness.metallicRoughnessTexture);
+        let hasMetallicRoughness= material[0].pbrMetallicRoughness.metallicRoughnessTexture !== undefined ? 1 : 0;
+        console.log("hasMRMap: ", hasNormalMap);
+
         console.log("Material info: ", material[0].pbrMetallicRoughness.baseColorTexture);
         console.log("Material info: ", material[0].pbrMetallicRoughness.roughnessFactor);
         console.log("Material info: ", material[0].pbrMetallicRoughness.metallicFactor);
-        let baseColorTextureIdx = material[0].pbrMetallicRoughness.baseColorTexture.index;
-        let normalTextureIdx = material[0].normalTexture.index;
-        let metallicRoughnessTextureIdx = material[0].pbrMetallicRoughness.metallicRoughnessTexture.index;
 
+
+        let baseColorTextureIdx = material[0].pbrMetallicRoughness.baseColorTexture.index;
+        let normalTextureIdx = -1;
+        let metallicRoughnessTextureIdx  = -1
+
+        if (hasNormalMap)
+        {
+            normalTextureIdx = material[0].normalTexture.index;
+            console.log("Normal map index:",normalTextureIdx );
+        }
+        if (hasMetallicRoughness)
+        {
+            metallicRoughnessTextureIdx= material[0].pbrMetallicRoughness.metallicRoughnessTexture.index;
+            console.log("metallicRoughnessTextureIdx map index:", metallicRoughnessTextureIdx);
+        }
+
+        console.log('normalTextureIdx:', normalTextureIdx);
+        console.log('metallicRoughnessTextureIdx:', normalTextureIdx);
+        if (normalTextureIdx == undefined)
+        {
+            console.log("No normal texture");
+        }
+
+        if (metallicRoughnessTextureIdx == undefined)
+        {
+            console.log("No normal texture");
+        }
 
 
         //console.log("Texture info: ", texture, texture.length);
@@ -433,9 +464,12 @@ export default class GltfRenderer
             let blob;
             if (baseColorTexture.uri) {
                 // Image is given as a URI
-                const response = await fetch(baseColorTexture.uri);
-                blob = await response.blob();
-              } 
+                console.log(gltf.asset);
+                //const response = await this.gltf_group.gltf.imageData.get(this.gltf_group.gltf.images[baseColorTextureIdx]);
+                blob = await this.gltf_group.asset.imageData.get(baseColorTextureIdx);
+                //const response = await fetch(baseColorTexture.uri);
+                //blob = await response.blob();
+            } 
               else {
                 // Image is given as a bufferView.
                 const bufferView = gltf.bufferViews[baseColorTexture.bufferView];
@@ -460,71 +494,83 @@ export default class GltfRenderer
             [imgBitmap.width, imgBitmap.height]
             );
 
-            // Normal
-            let normalTexture = this.gltf_group.gltf.images[normalTextureIdx];
-            //let blob;
-            if (normalTexture.uri) {
-                // Image is given as a URI
-                const response = await fetch(normalTexture.uri);
-                blob = await response.blob();
-              } 
-              else {
-                // Image is given as a bufferView.
-                const bufferView = gltf.bufferViews[normalTexture.bufferView];
-                //console.log(bufferView);
-                const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
-                //console.log(buffer);
-                blob = new Blob(
-                  [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
-                  { type: normalTexture.mimeType }
-                );
-              }
-            imgBitmap = await createImageBitmap(blob);
-            this.normalTexture = this.device.createTexture
-            ({
-                size: { width: imgBitmap.width, height: imgBitmap.height },
-                format: 'rgba8unorm',
-                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
-            });
-            this.device.queue.copyExternalImageToTexture(
-            { source: imgBitmap },
-            { texture: this.normalTexture },
-            [imgBitmap.width, imgBitmap.height]
-            );
 
-            // metallic and roughness
-            let metallicRoughnessTexture = this.gltf_group.gltf.images[metallicRoughnessTextureIdx];
-            //let blob;
-            if (metallicRoughnessTexture.uri) {
-                // Image is given as a URI
-                const response = await fetch(metallicRoughnessTexture.uri);
-                blob = await response.blob();
+                const emptyTexture = this.device.createTexture(
+                    {
+                        size: {width: 1, height: 1},
+                        format: 'rgba8unorm',
+                        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
+                    }
+                );
+
+
+            // Normal
+            if (hasNormalMap)
+            {
+                let normalTexture = this.gltf_group.gltf.images[normalTextureIdx];
+                //let blob;
+                if (normalTexture.uri) {
+                    // Image is given as a URI
+                    const response = await fetch(normalTexture.uri);
+                    blob = await response.blob();
                 } 
                 else {
-                // Image is given as a bufferView.
-                const bufferView = gltf.bufferViews[metallicRoughnessTexture.bufferView];
-                //console.log(bufferView);
-                const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
-                //console.log(buffer);
-                blob = new Blob(
+                    // Image is given as a bufferView.
+                    const bufferView = gltf.bufferViews[normalTexture.bufferView];
+                    //console.log(bufferView);
+                    const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
+                    //console.log(buffer);
+                    blob = new Blob(
                     [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
-                    { type: metallicRoughnessTexture.mimeType }
-                );
+                    { type: normalTexture.mimeType }
+                    );
                 }
-            imgBitmap = await createImageBitmap(blob);
-            this.metallicRoughnessTexture = this.device.createTexture
-            ({
-                size: { width: imgBitmap.width, height: imgBitmap.height },
-                format: 'rgba8unorm',
-                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
-            });
-            this.device.queue.copyExternalImageToTexture(
-            { source: imgBitmap },
-            { texture: this.metallicRoughnessTexture },
-            [imgBitmap.width, imgBitmap.height]
-            );
+                imgBitmap = await createImageBitmap(blob);
+                this.normalTexture = this.device.createTexture
+                ({
+                    size: { width: imgBitmap.width, height: imgBitmap.height },
+                    format: 'rgba8unorm',
+                    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
+                });
+                this.device.queue.copyExternalImageToTexture(
+                { source: imgBitmap },
+                { texture: this.normalTexture },
+                [imgBitmap.width, imgBitmap.height]
+                );
 
-
+                // metallic and roughness
+                let metallicRoughnessTexture = this.gltf_group.gltf.images[metallicRoughnessTextureIdx];
+                //let blob;
+                if (metallicRoughnessTexture.uri) {
+                    // Image is given as a URI
+                    const response = await fetch(metallicRoughnessTexture.uri);
+                    blob = await response.blob();
+                    } 
+                    else {
+                    // Image is given as a bufferView.
+                    const bufferView = gltf.bufferViews[metallicRoughnessTexture.bufferView];
+                    //console.log(bufferView);
+                    const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
+                    //console.log(buffer);
+                    blob = new Blob(
+                        [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
+                        { type: metallicRoughnessTexture.mimeType }
+                    );
+                    }
+                imgBitmap = await createImageBitmap(blob);
+                this.metallicRoughnessTexture = this.device.createTexture
+                ({
+                    size: { width: imgBitmap.width, height: imgBitmap.height },
+                    format: 'rgba8unorm',
+                    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
+                });
+                this.device.queue.copyExternalImageToTexture(
+                { source: imgBitmap },
+                { texture: this.metallicRoughnessTexture },
+                [imgBitmap.width, imgBitmap.height]
+                );
+            }
+            
 
         this.constantBindGroupLayout = this.device.createBindGroupLayout
         ({
@@ -586,11 +632,11 @@ export default class GltfRenderer
             },
             {
                 binding: 4,
-                resource: this.normalTexture.createView(),
+                resource: hasNormalMap? this.normalTexture.createView() : emptyTexture.createView(),
             },
             {
                 binding: 5,
-                resource: this.metallicRoughnessTexture.createView(),
+                resource: hasMetallicRoughness? this.metallicRoughnessTexture.createView() : emptyTexture.createView(),
             }
         ]
         });
@@ -668,9 +714,14 @@ export default class GltfRenderer
 
     initSkeletonsBindGroup() {
         //TODO: Two buffers: rootIndices, joints
+        const hasSkeleton = this.gltf_group.gltf.skin !== undefined? 1:0;
+        console.log("Has skeleton? ", hasSkeleton);
 
-        const numJoint = this.gltf_group.gltf.skins[0].joints.length;
-        const numSkeleton = this.gltf_group.skeletons.length; // = 1
+        let numJoint = -1;
+        let numSkeleton = -1; // = 1
+        
+        numJoint = this.gltf_group.gltf.skins[0].joints.length;
+        numSkeleton = this.gltf_group.skeletons.length; // = 1
 
         //for one skeleton
         const skeletonInfoSize = Float32Array.BYTES_PER_ELEMENT * (20 + numJoint * 20); // 4 + 16 + jointNum * jointSize(20)
@@ -702,19 +753,20 @@ export default class GltfRenderer
             this.gltf_group.skRootIndices.length,
             this.gltf_group.jtLayerArray.length, 
             -1,]).buffer;
-        var skeletonInfoData2 = new Float32Array(this.gltf_group.armatureTransform).buffer; // armatureTransform
-        this.device.queue.writeBuffer(this.compSkeletonInfoBuffer, 0, skeletonInfoData1);
-        this.device.queue.writeBuffer(this.compSkeletonInfoBuffer, 4 * Float32Array.BYTES_PER_ELEMENT, skeletonInfoData2);
-        this.loadJointsIntoBuffer(0, this.compSkeletonInfoBuffer, 20 * Float32Array.BYTES_PER_ELEMENT); // default pose
 
-        var rootIdxData =  new Int32Array (this.gltf_group.skRootIndices).buffer;
-        this.device.queue.writeBuffer(this.rootIdxBuffer, 0, rootIdxData);
+            var skeletonInfoData2 = new Float32Array(this.gltf_group.armatureTransform).buffer; // armatureTransform
+            this.device.queue.writeBuffer(this.compSkeletonInfoBuffer, 0, skeletonInfoData1);
+            this.device.queue.writeBuffer(this.compSkeletonInfoBuffer, 4 * Float32Array.BYTES_PER_ELEMENT, skeletonInfoData2);
+            this.loadJointsIntoBuffer(0, this.compSkeletonInfoBuffer, 20 * Float32Array.BYTES_PER_ELEMENT); // default pose
 
-        var parentIdxData = new Int32Array(this.gltf_group.jtParentIndices).buffer;
-        this.device.queue.writeBuffer(this.parentIdxBuffer, 0, parentIdxData);
+            var rootIdxData =  new Int32Array (this.gltf_group.skRootIndices).buffer;
+            this.device.queue.writeBuffer(this.rootIdxBuffer, 0, rootIdxData);
 
-        var layerArrayData = new Int32Array(this.gltf_group.jtLayerArray).buffer;
-        this.device.queue.writeBuffer(this.layerArrayBuffer, 0, layerArrayData);
+            var parentIdxData = new Int32Array(this.gltf_group.jtParentIndices).buffer;
+            this.device.queue.writeBuffer(this.parentIdxBuffer, 0, parentIdxData);
+
+            var layerArrayData = new Int32Array(this.gltf_group.jtLayerArray).buffer;
+            this.device.queue.writeBuffer(this.layerArrayBuffer, 0, layerArrayData);
 
         this.skeletonBindGroupLayout = this.device.createBindGroupLayout
         ({
@@ -754,14 +806,12 @@ export default class GltfRenderer
         //each single joint
         const jointBufferSize = Float32Array.BYTES_PER_ELEMENT * 20;
         
-        
         this.jointsTRSBuffer = this.device.createBuffer({
             size: jointsBufferSize,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
         });
 
         this.loadJointsIntoBuffer(0, this.jointsTRSBuffer, 0);
-        
         this.skeletonBindGroup = this.device.createBindGroup
         ({
             label: `Skeleton BindGroup`,
