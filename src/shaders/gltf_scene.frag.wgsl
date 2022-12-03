@@ -71,11 +71,15 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
     //let surfaceColor = (baseColor.rgb * ambientColor) + (baseColor.rgb * NDotL);
     let surfaceColor = (baseColor.rgb * NDotL);
 
-    let metallicRoughness = textureSample(myMetallicRoughness, mySampler, input.texcoord);
-    let roughness = metallicRoughness.g;
-    let metallic = metallicRoughness.b;
+    var roughness: f32 = 0.6;
+    var metallic: f32 = 0.0;
+    if (textureInfo.y != 0.0)
+    {
+        let metallicRoughness = textureSample(myMetallicRoughness, mySampler, input.texcoord);
+        roughness = metallicRoughness.g;
+        metallic = metallicRoughness.b;
+    }
     let finalColor = brdf(baseColor.rgb, metallic, roughness, lightDir, input.viewDir, N.xyz);
     return vec4(finalColor, baseColor.a);
     //return vec4(surfaceColor, baseColor.a);
-    //return baseColor;
 }
