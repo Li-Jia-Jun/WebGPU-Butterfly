@@ -14,7 +14,7 @@ import { mat4 } from 'gl-matrix';
 import * as DAT from 'dat.gui';
 
 const controls = {
-    instance_num: 10,
+    instance_num: 4,
     frequency: 1,
     amplitude: 1,
     air_density: 1,

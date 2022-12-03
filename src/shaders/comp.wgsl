@@ -134,42 +134,45 @@ fn translate(t: mat4x4<f32>, x: f32, y: f32, z: f32) -> mat4x4<f32>{
     return res;
 }
 
-fn flapWings()
+fn flapWings(idx: u32)
 {
   var speed = 6.0;
-
   var jointIndex = 8; // Bone.009
   var defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[jointIndex].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed), 0, 0);
 
   jointIndex = 15; // Bone.004
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[jointIndex].rotate = defaultRot - vec4(0, 25 * sin(time.value * speed), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(0, 25 * sin(time.value * speed), 0, 0);
 
   jointIndex = 19; // Bone.019
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[jointIndex].rotate = defaultRot - vec4(0, 30 * sin(time.value * speed), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(0, 30 * sin(time.value * speed), 0, 0);
 
   jointIndex = 26; // Bone.026
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[jointIndex].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed), 0, 0);
 }
 
 fn updateVelocity(v: vec3<f32>, force: vec3<f32>, dt: f32) -> vec3<f32>
 {
     var res = v;
-    res = res + force* time.value * dt;
+    res = force* time.value * dt;
     return res;
 }
 
+fn noise_gen1(p: vec3<f32>) -> f32 
+ { 
+    return fract(sin((dot(p, vec3(127.1, 311.7, 191.999)))) * 43758.5453) - 0.5; 
+ } 
 
-@compute @workgroup_size(1)
+@compute @workgroup_size(64)
 fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) 
 {
   const deltaTime = 0.01;
-
+  var idx = GlobalInvocationID.x;
   //model matrix transformation
-  var m = transform[0];
+  var m = transform[idx];
 
   var m_translate = getTranslationMatrix(m);
   var m_rotation = getScaleAndRotationMatrix(m);
@@ -182,32 +185,31 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
                             vec4<f32>(0, sy, 0, 0), 
                             vec4<f32>(0, 0, sz, 0), 
                             vec4<f32>(0, 0, 0, 1)); 
-
   m_rotation[3][0] = 0;
   m_rotation[3][1] = 0; 
   m_rotation[3][2] = 0;
 
-  var force = vec3<f32>(0, -0.098, 0);
+  var translateVec = vec3<f32>(m_translate[3][0], m_translate[3][1], m_translate[3][2]);
+  var force = vec3<f32>(cos(time.value)+noise_gen1(translateVec),-(0.05 * (noise_gen1(translateVec)+ 0.5)) , sin(time.value)+noise_gen1(translateVec));
 
   var velocity = velocitiesData[0];
-
   velocity = updateVelocity(velocity, force, deltaTime);
   velocitiesData[0] = velocity;
 
   
-  m_translate = translate(m_translate, velocity.x, velocity.y, velocity.z);
-
+ // m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
+  m_translate = translate(m_translate,0, 0.0, 0);
   //x, y, z rotation
   var rot = vec4<f32>(0, 0, 0, 0);
   var localRotationMatrix = eulerToRotationMatrix(rot);
   m_rotation = localRotationMatrix * m_rotation;
 
   m = m_translate * m_rotation * m_scale;
-  transform[0] = m;
+  transform[idx] = m;
 //======================================================================================//
 
   //Joint animation here
-  flapWings();
+  flapWings(idx);
   
   // Update joints layer by layer
   var currLayer = 0;
@@ -224,18 +226,18 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
     // For first layer (root joints), its transform matrix comes from its TRS directly
     if(currLayer == 0)
     {
-      jointTransforms[jointIndex] = skeletonInfo.armatrureTransform * getJointMatrix(jointsData.joints[jointIndex]);
+      jointTransforms[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)] = skeletonInfo.armatrureTransform * getJointMatrix(jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)]);
       continue;
     }
 
     // Get parent transform
     // (layer traverse guarantees that parent transformation is updated)
     var parentIndex = jtParentIndices[jointIndex];
-    var parentTransform = jointTransforms[parentIndex];
+    var parentTransform = jointTransforms[i32(idx) * i32(skeletonInfo.jointNum) + i32(parentIndex)];
     
-    var thisTransform = getJointMatrix(jointsData.joints[jointIndex]);
+    var thisTransform = getJointMatrix(jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)]);
     
-    jointTransforms[jointIndex] = parentTransform * thisTransform;
+    jointTransforms[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)] = parentTransform * thisTransform;
   } 
 }
 

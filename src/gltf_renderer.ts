@@ -6,6 +6,7 @@ import compShaderCode from './shaders/comp.wgsl';
 import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
 import {mat4, vec3, vec4} from 'gl-matrix';
 import GLTFGroup from './gltf_group';
+import { count } from 'console';
 
 
 // Make sure the shaders follow this mapping
@@ -236,6 +237,7 @@ export default class GltfRenderer
                 let st = index * 16 * Float32Array.BYTES_PER_ELEMENT;
                 let arr = new Float32Array(jointTransformArrayBuffer, st, 16);
                 arr.set(mat);
+
             }  
             for(let i = 0; i < instanceNum; i++)
             {
@@ -748,7 +750,7 @@ export default class GltfRenderer
         });
 
         //for one now
-        const jointsBufferSize = numSkeleton * Float32Array.BYTES_PER_ELEMENT * this.gltf_group.skeletons[0].joints.length * 20; //(4 + 4 + 4 + 8)
+        const jointsBufferSize =this.gltf_group.instanceCount * numSkeleton * Float32Array.BYTES_PER_ELEMENT * this.gltf_group.skeletons[0].joints.length * 20; //(4 + 4 + 4 + 8)
         //each single joint
         const jointBufferSize = Float32Array.BYTES_PER_ELEMENT * 20;
         
@@ -788,35 +790,48 @@ export default class GltfRenderer
         });
     }
 
-    loadJointsIntoBuffer(whichSkeleton : number, buffer : GPUBuffer, offset : number)
-    {
-        const jointBufferSize = Float32Array.BYTES_PER_ELEMENT * 20;    // 4+4+4+8
+    writeBuffer(whichSkeleton: number, buffer: GPUBuffer, offset: number, jointBufferSize: number, totalCount: number): number {
+        var count = totalCount;
+        for (var i = 0; i < this.gltf_group.skeletons[whichSkeleton].joints.length; i++) {
 
-        for(var i = 0; i < this.gltf_group.skeletons[whichSkeleton].joints.length; i++) {
-            
             let jointArrayBuffer = new ArrayBuffer(jointBufferSize);
             // add each joint into the buffer
             let translate = new Float32Array(jointArrayBuffer, 0, 4);
-            
+
             let rotation = new Float32Array(jointArrayBuffer, 4 * Float32Array.BYTES_PER_ELEMENT, 4);
-            
+
             let scale = new Float32Array(jointArrayBuffer, 8 * Float32Array.BYTES_PER_ELEMENT, 4);
-            
+
             let children = new Float32Array(jointArrayBuffer, 12 * Float32Array.BYTES_PER_ELEMENT, 8);
 
             translate.set(this.gltf_group.skeletons[0].joints[i].translate);
             rotation.set(this.gltf_group.skeletons[0].joints[i].rotate);
             scale.set(this.gltf_group.skeletons[0].joints[i].scale);
 
-            for(var j = 0; j < 8; j++) {
-                if(j >= this.gltf_group.skeletons[0].joints[i].children.length) {
+            for (var j = 0; j < 8; j++) {
+                if (j >= this.gltf_group.skeletons[0].joints[i].children.length) {
                     children[j] = -1;
                 } else {
-                    children[j] = this.gltf_group.skeletons[0].joints[i].children[j]; 
+                    children[j] = this.gltf_group.skeletons[0].joints[i].children[j];
                 }
             }
-
-            this.device.queue.writeBuffer(buffer, offset + i * 20 * Float32Array.BYTES_PER_ELEMENT, jointArrayBuffer);
+            
+            this.device.queue.writeBuffer(buffer, offset + count * 20 * Float32Array.BYTES_PER_ELEMENT, jointArrayBuffer);
+            count++;
+        }
+        return count;
+    }
+    loadJointsIntoBuffer(whichSkeleton : number, buffer : GPUBuffer, offset : number)
+    {
+        const jointBufferSize = Float32Array.BYTES_PER_ELEMENT * 20;    // 4+4+4+8
+        //total i
+        var totalCount = 0;
+        totalCount = this.writeBuffer(whichSkeleton, buffer, offset, jointBufferSize, totalCount);
+        if (buffer == this.jointsTRSBuffer) {
+            for(var c = 0; c < this.gltf_group.instanceCount-1; c++){
+                console.log(totalCount);
+                totalCount = this.writeBuffer(whichSkeleton, buffer, offset, jointBufferSize, totalCount);
+            }
         }
     }
     async loadImage(gltf, image)
