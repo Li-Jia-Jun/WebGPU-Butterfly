@@ -1,12 +1,11 @@
-// import Renderer from './renderer';
-// const canvas = document.getElementById('gfx') as HTMLCanvasElement;
-// canvas.width = canvas.height = 640;
-// const renderer = new Renderer(canvas);
-// renderer.start();
-
-
 import GLTFGroup from './gltf_group';
 import GltfRenderer from './gltf_renderer';
+
+import butterflyVertShader from './shaders/gltf.vert.wgsl';
+import butterflyFragShader from './shaders/gltf.frag.wgsl';
+
+import sceneVertShader from './shaders/gltf_scene.vert.wgsl';
+import sceneFragShader from './shaders/gltf_scene.frag.wgsl';
 
 import OrbitCamera from './orbit_camera';
 import FlyingCamera  from './flying_camera';
@@ -83,72 +82,88 @@ export default class Application
             this.resizeBackings();
 
             // Camera
-            //this.camera = new OrbitCamera(this.canvas, () => {this.updateFrame();});
             this.camera = new FlyingCamera(this.canvas, () => {});
-            // this.camera.target = [0, 0, 0];
-            // this.camera.maxDistance = 100;
-            // this.camera.minDistance = 0.001;
-            // this.camera.distance = 10;
 
-            // Rigged Buffterfly (first renderer)
-            let s : number = 1.5;
-            this.gltf_butterfly = new GLTFGroup();
+            // Butterfly
+            await this.initButterfly();        
+            await this.initScene();
 
-            this.gltf_scene = new GLTFGroup();
-
-            // create instancing name list and transform list
-            let instance_name = [];
-            let instance_trans = [];
-            for (let i=1; i<=controls.instance_num;++i)
-            {
-                let newName = ("b"+(i+1).toString());
-                instance_name.push(newName);
-                let even = (i % 2 == 0);
-                let newTrans = [];
-                if (even)
-                {
-                    newTrans = [s,0,0,0,  0,s,0,0,  0,0,s,0,  0 - 4 * i,0,0,1];
-                }
-                else
-                {
-                    newTrans = [s,0,0,0,  0,s,0,0,  0,0,s,0,  4 * i,0,0,1];
-                }
-                instance_trans.push(newTrans);
-            }
-
-            await this.gltf_butterfly.init(
-                'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-done.gltf',
-
-                controls.instance_num,
-                instance_name,
-                instance_trans);
-
-            this.renderer_butterfly = new GltfRenderer();
-            await this.renderer_butterfly.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_butterfly, this.depthTexture, this.depthTextureView, true);
-            
-            // await this.gltf_scene.init(
-            //     'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene.gltf',
-            //     1,
-            //     ['Scene'],
-            //     [mat4.fromValues(1.5,0,0,0, 0,1.5,0,0, 0,0,1.5,0, 0,0,0,1)]);
-
-            // this.renderer_scene= new GltfRenderer();
-            // await this.renderer_scene.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_scene, this.depthTexture, this.depthTextureView, true);
-
-
-            // // Rigged Figure
-            // let s2 : number = 3.0;
-            // this.gltf_figure = new GLTFGroup();
-            // await this.gltf_figure.init(
-            //     'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedFigure/glTF/RiggedFigure.gltf',
-            //     1,
-            //     ["f1"],
-            //     [[s2,0,0,0,  0,s2,0,0,  0,0,s2,0,  0,0,0,1]]);   
-            // this.renderer_figure = new GltfRenderer();
-            // await this.renderer_figure.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_figure, this.depthTexture, this.depthTextureView);
-            
             this.run(0);
         }
+    }
+
+    async initScene()
+    {
+        const s = 1;
+
+        this.gltf_scene = new GLTFGroup();
+        await this.gltf_scene.init(
+            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene.gltf',
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/BoxTextured/glTF/BoxTextured.gltf',
+            1,
+            ['Scene'],
+            [mat4.fromValues(s,0,0,0, 0,s,0,0, 0,0,s,0, 0,0,0,1)]);
+
+        const vertShader = this.device.createShaderModule({
+            label: 'Scene Vert Shader',
+            code: sceneVertShader
+        });
+        const fragShader = this.device.createShaderModule({
+            label: 'Scene Frag Shader',
+            code: sceneFragShader
+        });
+
+        this.renderer_scene= new GltfRenderer();
+        await this.renderer_scene.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_scene, this.depthTexture, this.depthTextureView, 
+            vertShader, fragShader, false);
+    }
+
+    async initButterfly()
+    {
+        // Rigged Buffterfly (first renderer)
+        let s : number = 1.5;
+        this.gltf_butterfly = new GLTFGroup();  
+
+        // create instancing name list and transform list
+        let instance_name = [];
+        let instance_trans = [];
+        for (let i=1; i<=controls.instance_num;++i)
+        {
+            let newName = ("b"+(i+1).toString());
+            instance_name.push(newName);
+            let even = (i % 2 == 0);
+            let newTrans = [];
+            if (even)
+            {
+                newTrans = [s,0,0,0,  0,s,0,0,  0,0,s,0,  0 - 4 * i,0,0,1];
+            }
+            else
+            {
+                newTrans = [s,0,0,0,  0,s,0,0,  0,0,s,0,  4 * i,0,0,1];
+            }
+            instance_trans.push(newTrans);
+        }
+
+        // shader module
+        const vertShader = this.device.createShaderModule({
+            label: 'Butterfly Vert Shader',
+            code: butterflyVertShader
+        });
+        const fragShader = this.device.createShaderModule({
+            label: 'Butterfly Frag Shader',
+            code: butterflyFragShader
+        });
+
+        await this.gltf_butterfly.init(
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-done.gltf',
+            controls.instance_num,
+            instance_name,
+            instance_trans);
+        
+        this.renderer_butterfly = new GltfRenderer();
+        await this.renderer_butterfly.init(this.adapter, this.device, this.queue, this.canvas, this.context, this.gltf_butterfly, 
+            this.depthTexture, this.depthTextureView, vertShader, fragShader,
+            true);
     }
 
     async initializeWebGPU(): Promise<boolean> 
@@ -219,7 +234,7 @@ export default class Application
         
         // Update camera buffer for each renderer
         this.renderer_butterfly.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, this.time);    
-       // this.renderer_figure.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, tihs.time);
+        this.renderer_scene.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, this.time);   
     
     }
 
@@ -237,6 +252,7 @@ export default class Application
         
         // Render
         this.renderer_butterfly.renderGLTF();  
+        this.renderer_scene.renderGLTF();
 
         // Update HTML display
         this.updateDisplay();

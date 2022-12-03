@@ -1,12 +1,10 @@
 
-import vertShaderCode from './shaders/gltf.vert.wgsl';
-import fragShaderCode from './shaders/gltf.frag.wgsl';
+
 import compShaderCode from './shaders/comp.wgsl';
 
 import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
 import {mat4, vec3, vec4} from 'gl-matrix';
 import GLTFGroup from './gltf_group';
-import { count } from 'console';
 
 
 // Make sure the shaders follow this mapping
@@ -78,8 +76,6 @@ export default class GltfRenderer
     constantBindGroupLayout: GPUBindGroupLayout;
     constantBindGroup : GPUBindGroup;
 
-
-
     // Pipeline
     gltfPipelineLayout : GPUPipelineLayout;
     shaderModule : GPUShaderModule;
@@ -120,11 +116,14 @@ export default class GltfRenderer
 
     isFirstRenderer : boolean;
 
+    // Temp
+    hasJoint : boolean;
+
 
     constructor(){}
 
     async init(adapter : GPUAdapter, device : GPUDevice, queue : GPUQueue, canvas : HTMLCanvasElement, context : GPUCanvasContext,
-        gltf_group : GLTFGroup, depthTexture : GPUTexture, depthTextureView : GPUTextureView, isFirstRenderer : boolean = false)
+        gltf_group : GLTFGroup, depthTexture : GPUTexture, depthTextureView : GPUTextureView, vertShader : GPUShaderModule, fragShader : GPUShaderModule, isFirstRenderer : boolean = false)
     {     
         this.adapter = adapter;
         this.device = device;
@@ -139,7 +138,15 @@ export default class GltfRenderer
         this.depthTexture = depthTexture;
         this.depthTextureView = depthTextureView;
 
+        this.vertShaderModule = vertShader;
+        this.fragShaderModule = fragShader;
+
         this.isFirstRenderer = isFirstRenderer;
+
+        // Temp
+        this.hasJoint = this.gltf_group.gltf.skins !== undefined && 
+        this.gltf_group.gltf.skins[0].joints !== undefined && 
+        this.gltf_group.gltf.skins[0].joints.length > 0 ? true : false;
 
         this.nodeGpuData = new Map();
         this.primitiveGpuData = new Map();
@@ -158,36 +165,43 @@ export default class GltfRenderer
         await this.initConstantBindGroup();
         this.initFrameBindGroup();
         this.initNodeBindGroup();
-        this.initComputeBindGroup();
-        this.initSkeletonsBindGroup();
 
-        //create compute pipeline here, maybe not
-        this.computePipelineLayout = this.device.createPipelineLayout
-        ({
-            label: 'glTF Compute Pipeline Layout',
-            bindGroupLayouts: [
-               this.computeBindGroupLayout,
-               this.skeletonBindGroupLayout
-            ]
+        // Temporary way to decide if this is butterfly
+        if(this.hasJoint)
+        {
+            this.initComputeBindGroup();
+            this.initSkeletonsBindGroup();
 
-        });
-        const computeModule = this.getComputeShaderModule();
-        this.computePipeline = this.device.createComputePipeline({
-            layout:  this.computePipelineLayout,
-            compute: {
-              module: computeModule, 
-              entryPoint: 'simulate',
-            },
-        });
-        // Pipeline Layout
-        this.gltfPipelineLayout = this.device.createPipelineLayout
-        ({
-            label: 'glTF Pipeline Layout',
-            bindGroupLayouts: [
-                this.constantBindGroupLayout,
-                this.frameBindGroupLayout,
-                this.nodeBindGroupLayout,
-        ]});
+            //create compute pipeline here, maybe not
+            this.computePipelineLayout = this.device.createPipelineLayout
+            ({
+                label: 'glTF Compute Pipeline Layout',
+                bindGroupLayouts: [
+                    this.computeBindGroupLayout,
+                    this.skeletonBindGroupLayout
+                ]
+
+            });
+            const computeModule = this.getComputeShaderModule();
+            this.computePipeline = this.device.createComputePipeline({
+                layout:  this.computePipelineLayout,
+                compute: {
+                    module: computeModule, 
+                    entryPoint: 'simulate',
+                },
+            });
+            }
+
+
+            // Pipeline Layout
+            this.gltfPipelineLayout = this.device.createPipelineLayout
+            ({
+                label: 'glTF Pipeline Layout',
+                bindGroupLayouts: [
+                    this.constantBindGroupLayout,
+                    this.frameBindGroupLayout,
+                    this.nodeBindGroupLayout,
+            ]});
 
         // Loop through each primitive of each mesh and create a compatible WebGPU pipeline.
         for (const mesh of this.gltf_group.gltf.meshes) 
@@ -318,10 +332,10 @@ export default class GltfRenderer
 
     async initConstantBindGroup()
     {
-        const hasJoint = this.gltf_group.gltf.skins !== undefined ? 1 : 0;
+        // Joint info
+        const hasJoint = this.hasJoint ? 1 : 0;
         const jointNum = hasJoint ? this.gltf_group.gltf.skins[0].joints.length : 0;
-        
-        // Joint Info Buffer
+ 
         this.jointInfoBuffer = this.device.createBuffer
         ({
             size: 4 * Float32Array.BYTES_PER_ELEMENT,
@@ -989,30 +1003,6 @@ export default class GltfRenderer
         }    
     }
 
-    getVertexShaderModule()
-    {
-        if (!this.vertShaderModule)
-        {
-            this.vertShaderModule = this.device.createShaderModule({
-                label: 'glTF vertex shader module',
-                code : vertShaderCode
-            });
-        }
-        return this.vertShaderModule;
-    }
-
-    getFragmentShaderModule()
-    {
-        if (!this.fragShaderModule)
-        {
-            this.fragShaderModule = this.device.createShaderModule({
-                label: 'glTF fragment shader module',
-                code : fragShaderCode
-            });
-        }
-        return this.fragShaderModule;
-    }
-
     getComputeShaderModule() {
         if (!this.compShaderModule)
         {
@@ -1140,13 +1130,11 @@ export default class GltfRenderer
             drawCount = accessor.count;
         }
 
-        const vertModule = this.getVertexShaderModule();
-        const fragModule = this.getFragmentShaderModule();
         const pipeline = this.device.createRenderPipeline({
             label: 'glTF renderer pipeline',
             layout: this.gltfPipelineLayout,
             vertex: {
-              module: vertModule,
+              module: this.vertShaderModule,
               entryPoint: 'vertexMain',
               buffers: bufferLayout,
             },
@@ -1163,7 +1151,7 @@ export default class GltfRenderer
                 format: 'depth24plus-stencil8'
             },
             fragment: {
-              module : fragModule,
+              module : this.fragShaderModule,
               entryPoint: 'fragmentMain',
               targets: [{
                 format: 'bgra8unorm'
@@ -1222,12 +1210,16 @@ export default class GltfRenderer
         this.commandEncoder = this.device.createCommandEncoder();
 
         //compute shader first
-        this.computepassEncoder = this.commandEncoder.beginComputePass();
-        this.computepassEncoder.setPipeline(this.computePipeline);
-        this.computepassEncoder.setBindGroup(0, this.computeBindGroup);
-        this.computepassEncoder.setBindGroup(1, this.skeletonBindGroup);
-        this.computepassEncoder.dispatchWorkgroups(1);
-        this.computepassEncoder.end();
+
+        if(this.hasJoint)
+        {
+            this.computepassEncoder = this.commandEncoder.beginComputePass();
+            this.computepassEncoder.setPipeline(this.computePipeline);
+            this.computepassEncoder.setBindGroup(0, this.computeBindGroup);
+            this.computepassEncoder.setBindGroup(1, this.skeletonBindGroup);
+            this.computepassEncoder.dispatchWorkgroups(1);
+            this.computepassEncoder.end();
+        }
 
         // Render pass
         this.passEncoder = this.commandEncoder.beginRenderPass(renderPassDesc);
@@ -1304,8 +1296,11 @@ export default class GltfRenderer
         this.device.queue.writeBuffer(this.cameraBuffer, 0, frameArrayBuffer);
 
         // Update compute shader buffer
-        let timeArrayBffer = new Float32Array([time]).buffer;
-        this.device.queue.writeBuffer(this.timeBuffer, 0, timeArrayBffer);
+        if(this.hasJoint)
+        {
+            let timeArrayBffer = new Float32Array([time]).buffer;
+            this.device.queue.writeBuffer(this.timeBuffer, 0, timeArrayBffer);
+        }
     }
 
     setInstanceBuffer()
