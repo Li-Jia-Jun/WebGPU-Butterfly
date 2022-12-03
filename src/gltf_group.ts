@@ -146,7 +146,7 @@ export default class GLTFGroup
         this.asset.preFetchAll();
 
         // Build skeleton if GLTF includes rigging
-        this.hasJoint = this.gltf.skins !== undefined; 
+        this.hasJoint = this.gltf.skins !== undefined && this.gltf.skins[0].joints !== undefined && this.gltf.skins[0].joints.length > 0; 
         if(this.hasJoint)
         {
             this.#initSkeletons();
@@ -164,6 +164,28 @@ export default class GLTFGroup
         this.#printAnything();
     }
 
+    refreshInstance(instanceCount : number = 1, names : string[] = [""], transforms : mat4[] = [[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]])
+    {
+        this.transforms = transforms;
+        this.names = names;
+        this.instanceCount = instanceCount;
+
+        this.hasJoint = this.gltf.skins !== undefined && this.gltf.skins[0].joints !== undefined && this.gltf.skins[0].joints.length > 0; 
+        if(this.hasJoint)
+        {
+            this.#initSkeletons();
+        }
+
+        this.nodeMatrics = new Map<GLTFSpace.Node, mat4>();
+        const defaultTransform : mat4 = mat4.fromValues(1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1);
+        for(const [index, node] of this.gltf.nodes.entries())
+        {
+            this.#calcNodeMatrix(index, node, defaultTransform, false);
+        }
+
+        this.initVelocity();
+    }
+
     initVelocity() {
         this.velocity = new Array();
         for(let i = 0; i < this.instanceCount; i++) {
@@ -171,7 +193,6 @@ export default class GLTFGroup
             this.velocity.push(v);
         }
     }
-
 
     #initSkeletons()
     {

@@ -167,6 +167,39 @@ fn noise_gen1(p: vec3<f32>) -> f32
     return fract(sin((dot(p, vec3(127.1, 311.7, 191.999)))) * 43758.5453) - 0.5; 
  } 
 
+
+ fn update_skeleton(idx : i32)
+ {
+  // Update joints layer by layer
+  var currLayer = 0;
+  var layerSize = i32(skeletonInfo.layerArrSize);
+  for(var i = 0; i < layerSize; i++)
+  {
+    var jointIndex = skLayerArray[i];
+    if(jointIndex < 0)
+    {
+      currLayer = currLayer + 1;
+      continue;
+    }
+
+    // For first layer (root joints), its transform matrix comes from its TRS directly
+    if(currLayer == 0)
+    {
+      jointTransforms[idx * i32(skeletonInfo.jointNum) + i32(jointIndex)] = skeletonInfo.armatrureTransform * getJointMatrix(jointsData.joints[idx * i32(skeletonInfo.jointNum) + i32(jointIndex)]);
+      continue;
+    }
+
+    // Get parent transform
+    // (layer traverse guarantees that parent transformation is updated)
+    var parentIndex = jtParentIndices[jointIndex];
+    var parentTransform = jointTransforms[idx * i32(skeletonInfo.jointNum) + i32(parentIndex)];
+    
+    var thisTransform = getJointMatrix(jointsData.joints[idx * i32(skeletonInfo.jointNum) + i32(jointIndex)]);
+    
+    jointTransforms[idx * i32(skeletonInfo.jointNum) + i32(jointIndex)] = parentTransform * thisTransform;
+  } 
+}
+
 @compute @workgroup_size(64)
 fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) 
 {
@@ -212,34 +245,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   //Joint animation here
   flapWings(idx);
   
-  // Update joints layer by layer
-  var currLayer = 0;
-  var layerSize = i32(skeletonInfo.layerArrSize);
-  for(var i = 0; i < layerSize; i++)
-  {
-    var jointIndex = skLayerArray[i];
-    if(jointIndex < 0)
-    {
-      currLayer = currLayer + 1;
-      continue;
-    }
-
-    // For first layer (root joints), its transform matrix comes from its TRS directly
-    if(currLayer == 0)
-    {
-      jointTransforms[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)] = skeletonInfo.armatrureTransform * getJointMatrix(jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)]);
-      continue;
-    }
-
-    // Get parent transform
-    // (layer traverse guarantees that parent transformation is updated)
-    var parentIndex = jtParentIndices[jointIndex];
-    var parentTransform = jointTransforms[i32(idx) * i32(skeletonInfo.jointNum) + i32(parentIndex)];
-    
-    var thisTransform = getJointMatrix(jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)]);
-    
-    jointTransforms[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)] = parentTransform * thisTransform;
-  } 
+  update_skeleton(i32(idx));
 }
 
 

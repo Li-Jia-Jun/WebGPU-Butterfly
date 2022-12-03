@@ -120,6 +120,8 @@ export default class GltfRenderer
     // Temp
     hasJoint : boolean;
 
+    canRender : boolean;
+
 
     constructor(){}
 
@@ -153,56 +155,55 @@ export default class GltfRenderer
         this.primitiveGpuData = new Map();
 
         //this.resizeBackings();
+
+        this.canRender = false;
+
         await this.initializeWebGPUAndGLTF(); 
     }
 
+    refreshInstance()
+    {
+        // When instances are changed in GLTFGroup
+        // Simply rebuild necessary bindgroups and pipelines again
+        // Question: Will garbage collection take care of the unreleased memory in both CPU and GPU?
+
+        this.canRender = false;
+
+        this.initFrameBindGroup();
+        this.initRenderPipeline();
+        this.initComputePipeline();
+
+        this.canRender = true;
+    }
 
     async initializeWebGPUAndGLTF()
     {
         // Load all gltf data into GPUBuffers 
         await this.loadGPUBuffers();
 
-        // Bind Groups
+        // Render Bind Groups
         await this.initConstantBindGroup();
         this.initFrameBindGroup();
         this.initNodeBindGroup();
 
-        // Temporary way to decide if this is butterfly
-        if(this.hasJoint)
-        {
-            this.initComputeBindGroup();
-            this.initSkeletonsBindGroup();
+        this.initComputePipeline();
 
-            //create compute pipeline here, maybe not
-            this.computePipelineLayout = this.device.createPipelineLayout
-            ({
-                label: 'glTF Compute Pipeline Layout',
-                bindGroupLayouts: [
-                    this.computeBindGroupLayout,
-                    this.skeletonBindGroupLayout
-                ]
+        this.initRenderPipeline();
 
-            });
-            const computeModule = this.getComputeShaderModule();
-            this.computePipeline = this.device.createComputePipeline({
-                layout:  this.computePipelineLayout,
-                compute: {
-                    module: computeModule, 
-                    entryPoint: 'simulate',
-                },
-            });
-            }
+        this.canRender = true;
+    }
 
-
-            // Pipeline Layout
-            this.gltfPipelineLayout = this.device.createPipelineLayout
-            ({
-                label: 'glTF Pipeline Layout',
-                bindGroupLayouts: [
-                    this.constantBindGroupLayout,
-                    this.frameBindGroupLayout,
-                    this.nodeBindGroupLayout,
-            ]});
+    initRenderPipeline()
+    {
+        // Pipeline Layout
+        this.gltfPipelineLayout = this.device.createPipelineLayout
+        ({
+            label: 'glTF Pipeline Layout',
+            bindGroupLayouts: [
+                this.constantBindGroupLayout,
+                this.frameBindGroupLayout,
+                this.nodeBindGroupLayout,
+        ]});
 
         // Loop through each primitive of each mesh and create a compatible WebGPU pipeline.
         for (const mesh of this.gltf_group.gltf.meshes) 
@@ -212,6 +213,35 @@ export default class GltfRenderer
                 this.setupPrimitive(primitive);
             }
         }
+    }
+
+    initComputePipeline()
+    {
+        // Temporary way to decide if this is butterfly
+        if(this.hasJoint)
+        {
+            this.initComputeBindGroup();
+            this.initSkeletonsBindGroup();
+    
+            //create compute pipeline here, maybe not
+            this.computePipelineLayout = this.device.createPipelineLayout
+            ({
+                label: 'glTF Compute Pipeline Layout',
+                bindGroupLayouts: [
+                    this.computeBindGroupLayout,
+                    this.skeletonBindGroupLayout
+                ]
+    
+            });
+            const computeModule = this.getComputeShaderModule();
+            this.computePipeline = this.device.createComputePipeline({
+                layout:  this.computePipelineLayout,
+                compute: {
+                    module: computeModule, 
+                    entryPoint: 'simulate',
+                },
+            });
+        }     
     }
 
     initFrameBindGroup()
@@ -233,8 +263,7 @@ export default class GltfRenderer
         this.setInstanceBuffer();
 
         // Joint Transforms
-        const hasJoint = this.gltf_group.gltf.skins !== undefined;
-        if(hasJoint)
+        if(this.hasJoint)
         {
             const jointNum = this.gltf_group.gltf.skins[0].joints.length;
             this.jointTransformBuffer = this.device.createBuffer
@@ -748,8 +777,8 @@ export default class GltfRenderer
 
     initSkeletonsBindGroup() {
         //TODO: Two buffers: rootIndices, joints
-        const hasSkeleton = this.gltf_group.gltf.skin !== undefined? 1:0;
-        console.log("Has skeleton? ", hasSkeleton);
+        const hasSkeleton = this.hasJoint? 1:0;
+        // console.log("Has skeleton? ", hasSkeleton);
 
         let numJoint = -1;
         let numSkeleton = -1; // = 1
@@ -982,7 +1011,6 @@ export default class GltfRenderer
             const bufferView = this.gltf_group.gltf.accessors[accesor].bufferView;
             bufferViewUsages.set(bufferView, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST);
             bufferViewUsages[bufferView] = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;      
-            //console.log("mark joint inverseBindmatrices bufferview: " + bufferView + ", usage = " + bufferViewUsages[bufferView]);
             inverseMatrixBufferView = bufferView;
         }
         
@@ -1200,6 +1228,12 @@ export default class GltfRenderer
 
     renderGLTF()
     {
+        //console.log("can render = " + this.canRender);
+        if(!this.canRender)
+        {
+            return;
+        }
+
         // Acquire next image from context
         this.colorTexture = this.context.getCurrentTexture();
         this.colorTextureView = this.colorTexture.createView();

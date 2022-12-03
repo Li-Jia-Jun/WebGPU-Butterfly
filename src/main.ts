@@ -24,6 +24,7 @@ export default class Application
 {
     renderer_butterfly : GltfRenderer;
     gltf_butterfly : GLTFGroup;
+    willRefreshButterfly : boolean;
 
     renderer_scene: GltfRenderer;
     gltf_scene: GLTFGroup;
@@ -65,9 +66,9 @@ export default class Application
             // GUI
             const gui = new DAT.GUI();
             gui.width = 300;
-            gui.add(controls, 'instance_num', 1, 100).step(1).name('Number of Butterflies')
-            .onChange(function(){
-                // TODO: update buffer
+            gui.add(controls, 'instance_num', 2, 100).step(1).name('Number of Butterflies')
+            .onChange(() => {
+                this.onInstanceChanged();
             });
             var forceGUI = gui.addFolder('Force');
             forceGUI.add(controls,'frequency', 0, 1).step(0.01);
@@ -90,6 +91,37 @@ export default class Application
 
             this.run(0);
         }
+    }
+
+    onInstanceChanged()
+    {
+        if(this.gltf_butterfly == undefined || this.renderer_butterfly == undefined)
+        {
+            return;
+        }
+
+        let s : number = 1.5;
+        let instance_name = [];
+        let instance_trans = [];
+        for (let i=1; i<=controls.instance_num;++i)
+        {
+            let newName = ("b"+(i+1).toString());
+            instance_name.push(newName);
+            let even = (i % 2 == 0);
+            let newTrans = [];
+            if (even)
+            {
+                newTrans = [s,0,0,0,  0,s,0,0,  0,0,s,0,  0 - 4 * i,0,0,1];
+            }
+            else
+            {
+                newTrans = [s,0,0,0,  0,s,0,0,  0,0,s,0,  4 * i,0,0,1];
+            }
+            instance_trans.push(newTrans);
+        }
+
+        this.gltf_butterfly.refreshInstance(controls.instance_num, instance_name, instance_trans);
+        this.renderer_butterfly.refreshInstance();
     }
 
     async initScene()
@@ -120,6 +152,8 @@ export default class Application
 
     async initButterfly()
     {
+        this.willRefreshButterfly = false;
+
         // Rigged Buffterfly (first renderer)
         let s : number = 1.5;
         this.gltf_butterfly = new GLTFGroup();  
@@ -249,10 +283,10 @@ export default class Application
     {
         // Update data in each frame
         this.updateFrameData(timestamp);
-        
+
         // Render
         this.renderer_butterfly.renderGLTF();  
-        this.renderer_scene.renderGLTF();
+        //this.renderer_scene.renderGLTF();
 
         // Update HTML display
         this.updateDisplay();
