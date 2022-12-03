@@ -2,6 +2,7 @@
 @group(0) @binding(3) var myTexture:  texture_2d<f32>;  
 @group(0) @binding(4) var myNormal:  texture_2d<f32>;  
 @group(0) @binding(5) var myMetallicRoughness:  texture_2d<f32>;  
+@group(0) @binding(6) var<uniform> textureInfo:  vec4<f32>;  
 
 
 // Some hardcoded lighting
@@ -54,8 +55,15 @@ fn brdf(color: vec3<f32>,
 fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32> 
 {
     // An extremely simple directional lighting model, just to give our model some shape.
-    //let N = normalize(input.normal);
-    let N = textureSample(myNormal, mySampler, input.texcoord);
+    var N: vec3<f32>;
+    if (textureInfo.x == 0.0)
+    {
+        N = normalize(input.normal); 
+    }
+    else
+    {
+        N = textureSample(myNormal, mySampler, input.texcoord).rgb;
+    }
     let L = normalize(lightDir);
     let NDotL = max(dot(N.xyz, L), 0.0);
 
@@ -69,4 +77,5 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
     let finalColor = brdf(baseColor.rgb, metallic, roughness, lightDir, input.viewDir, N.xyz);
     return vec4(finalColor, baseColor.a);
     //return vec4(surfaceColor, baseColor.a);
+    //return baseColor;
 }

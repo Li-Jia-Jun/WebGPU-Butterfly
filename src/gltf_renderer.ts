@@ -72,6 +72,7 @@ export default class GltfRenderer
     normalTexture: GPUTexture;
     metallicRoughnessTexture: GPUTexture;
     textureSampler: GPUSampler;
+    textureInfoBuffer: GPUBuffer;
 
     constantBindGroupLayout: GPUBindGroupLayout;
     constantBindGroup : GPUBindGroup;
@@ -374,12 +375,22 @@ export default class GltfRenderer
 
         console.log("Material info: ", material[0].pbrMetallicRoughness.metallicRoughnessTexture);
         let hasMetallicRoughness= material[0].pbrMetallicRoughness.metallicRoughnessTexture !== undefined ? 1 : 0;
-        console.log("hasMRMap: ", hasNormalMap);
+        console.log("hasMRMap: ", hasMetallicRoughness);
 
         console.log("Material info: ", material[0].pbrMetallicRoughness.baseColorTexture);
         console.log("Material info: ", material[0].pbrMetallicRoughness.roughnessFactor);
         console.log("Material info: ", material[0].pbrMetallicRoughness.metallicFactor);
 
+        this.textureInfoBuffer = this.device.createBuffer
+            ({            
+                size: 4 * Float32Array.BYTES_PER_ELEMENT,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+            });
+
+        let textureInfoArrayBuffer = new ArrayBuffer(4 * Float32Array.BYTES_PER_ELEMENT);
+        let textureInfoArray = new Float32Array(textureInfoArrayBuffer, 0, 4);
+        textureInfoArray.set(vec4.fromValues(hasNormalMap, hasMetallicRoughness, 0, 0));
+        this.device.queue.writeBuffer(this.textureInfoBuffer, 0, textureInfoArrayBuffer);
 
         let baseColorTextureIdx = material[0].pbrMetallicRoughness.baseColorTexture.index;
         let normalTextureIdx = -1;
@@ -620,6 +631,11 @@ export default class GltfRenderer
                 visibility: GPUShaderStage.FRAGMENT,
                 texture: {}  
             },
+            {
+                binding: 6,
+                visibility:GPUShaderStage.FRAGMENT,
+                buffer: {type: 'uniform'}
+            },
         ]
         });
 
@@ -651,7 +667,11 @@ export default class GltfRenderer
             {
                 binding: 5,
                 resource: hasMetallicRoughness? this.metallicRoughnessTexture.createView() : emptyTexture.createView(),
-            }
+            },
+            {
+                binding: 6,
+                resource: {buffer: this.textureInfoBuffer}
+            },
         ]
         });
     }
