@@ -174,12 +174,12 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   //model matrix transformation
   var m = transform[idx];
 
-  var m_translate = getTranslationMatrix(m);
-  var m_rotation = getScaleAndRotationMatrix(m);
+   var m_translate = getTranslationMatrix(m);
+   var m_rotation = getScaleAndRotationMatrix(m);
   
-  var sx = m_rotation[3][0];
-  var sy = m_rotation[3][1]; 
-  var sz = m_rotation[3][2];
+   var sx = m_rotation[3][0];
+   var sy = m_rotation[3][1]; 
+   var sz = m_rotation[3][2];
 
   var m_scale = mat4x4<f32>(vec4<f32>(sx, 0, 0, 0), 
                             vec4<f32>(0, sy, 0, 0), 
@@ -192,12 +192,12 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   var translateVec = vec3<f32>(m_translate[3][0], m_translate[3][1], m_translate[3][2]);
   var force = vec3<f32>(cos(time.value)+noise_gen1(translateVec),-(0.05 * (noise_gen1(translateVec)+ 0.5)) , sin(time.value)+noise_gen1(translateVec));
 
-  var velocity = velocitiesData[0];
+  var velocity = velocitiesData[idx];
   velocity = updateVelocity(velocity, force, deltaTime);
-  velocitiesData[0] = velocity;
+  velocitiesData[idx] = velocity;
 
   
- // m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
+   //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
   m_translate = translate(m_translate,0, 0.0, 0);
   //x, y, z rotation
   var rot = vec4<f32>(0, 0, 0, 0);
