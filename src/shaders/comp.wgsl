@@ -169,7 +169,7 @@ fn noise_gen1(p: vec3<f32>) -> f32
 
 
  fn update_skeleton(idx : i32)
- {
+{
   // Update joints layer by layer
   var currLayer = 0;
   var layerSize = i32(skeletonInfo.layerArrSize);
@@ -242,10 +242,13 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   transform[idx] = m;
 //======================================================================================//
 
-  //Joint animation here
-  flapWings(idx);
-  
-  update_skeleton(i32(idx));
+  if(u32(idx) < arrayLength(&transform))
+  {
+    // Animation here
+    flapWings(idx);
+
+    update_skeleton(i32(idx));
+  }
 }
 
 

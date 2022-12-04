@@ -13,7 +13,7 @@ import { mat4 } from 'gl-matrix';
 import * as DAT from 'dat.gui';
 
 const controls = {
-    instance_num: 5,
+    instance_num: 1,
     frequency: 1,
     amplitude: 1,
     air_density: 1,
@@ -66,7 +66,7 @@ export default class Application
             // GUI
             const gui = new DAT.GUI();
             gui.width = 300;
-            gui.add(controls, 'instance_num', 2, 100).step(1).name('Number of Butterflies')
+            gui.add(controls, 'instance_num', 1, 100).step(1).name('Number of Butterflies')
             .onChange(() => {
                 this.onInstanceChanged();
             });

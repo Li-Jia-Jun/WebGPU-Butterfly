@@ -1,7 +1,7 @@
 import * as GLTFSpace from 'gltf-loader-ts/lib/gltf';
 import {GltfLoader}  from 'gltf-loader-ts';
 import {GltfAsset}  from 'gltf-loader-ts';
-import {mat4, vec3, quat, glMatrix} from 'gl-matrix';
+import {mat4, vec4, vec3, quat, glMatrix} from 'gl-matrix';
 import {cloneDeep} from 'lodash';
 
 
@@ -122,7 +122,7 @@ export default class GLTFGroup
     skeletons : Skeleton[];
 
     transforms : mat4[];
-    velocity: vec3[];           // velocity vectors to pass
+    velocity: vec4[];           // velocity vectors to pass
     names : string[];
     instanceCount;
 
@@ -189,7 +189,7 @@ export default class GLTFGroup
     initVelocity() {
         this.velocity = new Array();
         for(let i = 0; i < this.instanceCount; i++) {
-            var v = vec3.fromValues(0, 0, 0);
+            var v = vec4.fromValues(0, 0, 0, 0);
             this.velocity.push(v);
         }
     }
@@ -281,9 +281,9 @@ export default class GLTFGroup
     {
         let joint = new Joint();
 
-        let t : number[] = node.translation !== undefined ? node.translation : [0, 0, 0, 0];
+        let t : number[] = node.translation !== undefined ? [node.translation[0], node.translation[1], node.translation[2], 1] : [0, 0, 0, 0];
         let r : number[] = node.rotation !== undefined? node.rotation : [0, 0, 0, 1];  // Quaternion
-        let s : number[] = node.scale !== undefined? node.scale : [1, 1, 1, 0];
+        let s : number[] = node.scale !== undefined? [node.scale[0], node.scale[1], node.scale[2], 0] : [1, 1, 1, 0];
 
         joint.translate = t;
 
