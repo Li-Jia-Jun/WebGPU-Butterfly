@@ -394,21 +394,25 @@ export default class GltfRenderer
             });
         }
 
+
+
         let material = this.gltf_group.gltf.materials;
         let textures = this.gltf_group.gltf.textures;
-        console.log("Material info: ", material);
-        console.log("Material info: ", material[0].normalTexture);
+
+
+        // for (let i = 0; i<material.length; i++)
+        // {
+
+        // }
+        //console.log("Material info: ", material);
+        //console.log("Material info: ", material[0].normalTexture);
         
         let hasNormalMap = material[0].normalTexture != undefined ? 1 : 0;
-        console.log("hasNormalMap: ", hasNormalMap);
-
-        console.log("Material info: ", material[0].pbrMetallicRoughness.metallicRoughnessTexture);
         let hasMetallicRoughness= material[0].pbrMetallicRoughness.metallicRoughnessTexture !== undefined ? 1 : 0;
-        console.log("hasMRMap: ", hasMetallicRoughness);
 
-        console.log("Material info: ", material[0].pbrMetallicRoughness.baseColorTexture);
-        console.log("Material info: ", material[0].pbrMetallicRoughness.roughnessFactor);
-        console.log("Material info: ", material[0].pbrMetallicRoughness.metallicFactor);
+        //console.log("Material info: ", material[0].pbrMetallicRoughness.baseColorTexture);
+        //console.log("Material info: ", material[0].pbrMetallicRoughness.roughnessFactor);
+        //console.log("Material info: ", material[0].pbrMetallicRoughness.metallicFactor);
 
         this.textureInfoBuffer = this.device.createBuffer
             ({            
@@ -437,7 +441,7 @@ export default class GltfRenderer
         }
 
         console.log('normalTextureIdx:', normalTextureIdx);
-        console.log('metallicRoughnessTextureIdx:', normalTextureIdx);
+        console.log('metallicRoughnessTextureIdx:', metallicRoughnessTextureIdx);
         if (normalTextureIdx == undefined)
         {
             console.log("No normal texture");
@@ -445,7 +449,7 @@ export default class GltfRenderer
 
         if (metallicRoughnessTextureIdx == undefined)
         {
-            console.log("No normal texture");
+            console.log("No MR texture");
         }
 
 
@@ -565,8 +569,7 @@ export default class GltfRenderer
                 //let blob;
                 if (normalTexture.uri) {
                     // Image is given as a URI
-                    const response = await fetch(normalTexture.uri);
-                    blob = await response.blob();
+                    blob = await this.gltf_group.asset.imageData.get(normalTextureIdx);
                 } 
                 else {
                     // Image is given as a bufferView.
@@ -591,14 +594,15 @@ export default class GltfRenderer
                 { texture: this.normalTexture },
                 [imgBitmap.width, imgBitmap.height]
                 );
-
+                }
+                if (hasMetallicRoughness)
+                {
                 // metallic and roughness
                 let metallicRoughnessTexture = this.gltf_group.gltf.images[metallicRoughnessTextureIdx];
                 //let blob;
                 if (metallicRoughnessTexture.uri) {
                     // Image is given as a URI
-                    const response = await fetch(metallicRoughnessTexture.uri);
-                    blob = await response.blob();
+                    blob = await this.gltf_group.asset.imageData.get(metallicRoughnessTextureIdx);
                     } 
                     else {
                     // Image is given as a bufferView.

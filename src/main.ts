@@ -126,7 +126,7 @@ export default class Application
 
     async initScene()
     {
-        const s = 10;
+        const s = 1;
 
         this.gltf_scene = new GLTFGroup();
         await this.gltf_scene.init(
