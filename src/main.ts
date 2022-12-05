@@ -157,7 +157,7 @@ export default class Application
         this.willRefreshButterfly = false;
 
         // Rigged Buffterfly (first renderer)
-        let s : number = 1.5;
+        let s : number = 1;
         this.gltf_butterfly = new GLTFGroup();  
 
         // create instancing name list and transform list

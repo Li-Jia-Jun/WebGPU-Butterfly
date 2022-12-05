@@ -224,17 +224,23 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   m_rotation[3][2] = 0;
 
   var translateVec = vec3<f32>(m_translate[3][0], m_translate[3][1], m_translate[3][2]);
-  var force = vec3<f32>(cos(time.value)+noise_gen1(translateVec),-(0.05 * (noise_gen1(translateVec)+ 0.5)) , sin(time.value)+noise_gen1(translateVec));
+  var force = vec3<f32>(cos(time.value)+noise_gen1(translateVec),(0.05 * (noise_gen1(translateVec)+ 0.5)) , sin(time.value)+noise_gen1(translateVec));
 
   var velocity = velocitiesData[idx];
   velocity = updateVelocity(velocity, force, deltaTime);
   velocitiesData[idx] = velocity;
 
   
-   //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
-  m_translate = translate(m_translate,0, 0.0, 0);
+   m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
+  //m_translate = translate(m_translate,0, 0.0, 0);
   //x, y, z rotation
   var rot = vec4<f32>(0, 0, 0, 0);
+  if(cos(time.value) > 0) {
+     rot = vec4<f32>(0, 0, 30 * 0.01, 0);
+  } else {
+    rot = vec4<f32>(0, 0, -30 * 0.01, 0);
+  }
+  
   var localRotationMatrix = eulerToRotationMatrix(rot);
   m_rotation = localRotationMatrix * m_rotation;
 
