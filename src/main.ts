@@ -39,7 +39,7 @@ export default class Application
 
     fov : number = Math.PI * 0.5;
     zNear : number = 0.001;
-    zFar : number = 100;
+    zFar : number = 1000000;
 
     #camPosDisplay : HTMLParagraphElement;
 
@@ -130,10 +130,10 @@ export default class Application
 
         this.gltf_scene = new GLTFGroup();
         await this.gltf_scene.init(
-            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene.gltf',
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
 
             //'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene.gltf',
-            //'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/BoxTextured/glTF/BoxTextured.gltf',
+            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/BoxTextured/glTF/BoxTextured.gltf',
             1,
             ['Scene'],
             [mat4.fromValues(s,0,0,0, 0,s,0,0, 0,0,s,0, 0,0,0,1)]);
@@ -288,7 +288,7 @@ export default class Application
 
         // Render
         this.renderer_butterfly.renderGLTF();  
-        //this.renderer_scene.renderGLTF();
+        this.renderer_scene.renderGLTF();
 
         // Update HTML display
         this.updateDisplay();
