@@ -22,7 +22,8 @@ Our project aims to create a realistic simulation of butterfly flights and behav
 - Simulation and bahavior control GUI
   - Allow the users to change key parameters in the simulation, such as the number of butterflies, the magnitude of different forces, and the current behaviors being simulated. 
 
-## **Milestone 3 - Dec 5**
+## Update History
+### **Milestone 3 - 12/05/22**
 Slides: https://docs.google.com/presentation/d/1AHIefwlu55ZyYZG1VEadliJOUGMHE7-N/edit#slide=id.g19cb66c9ca1_0_15
 
 Progress:
@@ -38,7 +39,7 @@ Next Step:
 - Add more scene presets
 - Add more features to the glTF loader (multiple materials support)
 
-## **Milestone 2 - Nov 28**
+### **Milestone 2 - 11/28/22**
 Slides: https://docs.google.com/presentation/d/1AHIefwlu55ZyYZG1VEadliJOUGMHE7-N/edit?rtpof=true
 
 Progress:
@@ -57,7 +58,7 @@ Next step:
 - Add a scene renderer
 
 
-## **Milestone 1 - Nov 16**
+### **Milestone 1 - 11/16/22**
 
 Slide: https://docs.google.com/presentation/d/1D0KU-Wp5UGeHj1HUCtebzcEjDT0gydEKm9OTPFgEmzs/edit#slide=id.g18fde25b9ae_9_0
 
