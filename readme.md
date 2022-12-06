@@ -1,12 +1,18 @@
-# 565 Final Project
-
-Haoquan Liang, Shineng Tang, Jiajun Li
+Realistic Butterfly Flight and Behavior Simulation with WebGPU
+==================================
+**University of Pennsylvania, CIS 565: GPU Programming and Architecture, Final Project**
+*  Author: Jiajun Li, Haoquan Liang, Shineng Tang
 
 ## **Overview**
 
 Our project aims to create a realistic simulation of butterfly flights and behaviors using WebGPU. The method we are using relies on the aerodynamic-based CFD solver, which guarantees realistic results, while using a hierarchical rigged skeleton to increase the performance so that it can run in realtime. 
 
-## **Features**
+## Table of Contents  
+* [Features](#features) 
+* [Update History](#history)
+* [Reference](#reference)
+
+## <a name="features">Features</a>
 - WebGPU Compute and Rendering Pipeline with instancing rendering
   - Compute shaders compute the new joint transformations
   - Instancing rendering ensures minimum memory consumption and maximum rendering performance
@@ -22,7 +28,7 @@ Our project aims to create a realistic simulation of butterfly flights and behav
 - Simulation and bahavior control GUI
   - Allow the users to change key parameters in the simulation, such as the number of butterflies, the magnitude of different forces, and the current behaviors being simulated. 
 
-## Update History
+## <a name="history">Update History</a>
 ### **Milestone 3 - 12/05/22**
 Slides: https://docs.google.com/presentation/d/1AHIefwlu55ZyYZG1VEadliJOUGMHE7-N/edit#slide=id.g19cb66c9ca1_0_15
 
@@ -74,3 +80,6 @@ Next step:
 - GLTF texture and animation support
 - Implement full content from the reference paper including force simulation and maneuvering control
 - More robust UI
+
+## <a name="reference"> Reference </a>
+* [A Practical Model for Realistic Butterfly Flight Simulation](http://www.cad.zju.edu.cn/home/jin/tog2022/tog2022.pdf)
