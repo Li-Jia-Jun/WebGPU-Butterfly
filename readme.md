@@ -19,6 +19,8 @@ Our project aims to create a realistic simulation of butterfly flights and behav
 - Butterfly simulations
   - Currently we have simple procedurally generated path and simple forces like gravity and wind for the butterfly
   - We will add realistic flight simulation to the butterflies based on the paper: http://www.cad.zju.edu.cn/home/jin/tog2022/tog2022.pdf 
+- Simulation and bahavior control GUI
+  - Allow the users to change key parameters in the simulation, such as the number of butterflies, the magnitude of different forces, and the current behaviors being simulated. 
 
 ## **Milestone 3 - Dec 5**
 Slides: https://docs.google.com/presentation/d/1AHIefwlu55ZyYZG1VEadliJOUGMHE7-N/edit#slide=id.g19cb66c9ca1_0_15
