@@ -5,6 +5,21 @@ Haoquan Liang, Shineng Tang, Jiajun Li
 ## **Overview**
 
 Our project aims to create a realistic simulation of butterfly flights and behaviors using WebGPU. The method we are using relies on the aerodynamic-based CFD solver, which guarantees realistic results, while using a hierarchical rigged skeleton to increase the performance so that it can run in realtime. 
+## **Milestone 3**
+Slides: https://docs.google.com/presentation/d/1AHIefwlu55ZyYZG1VEadliJOUGMHE7-N/edit#slide=id.g19cb66c9ca1_0_15
+
+Progress:
+- glTF Texture/Material loading with PBR shading
+- Skeleton hierarchy update in the Compute Shader
+- Simple forces and movement simulation
+- Instanced butterfly with various movement cycle.
+
+Next Step:
+- Add more forces simulations
+- Add group behaviors
+- Improve UI/UX
+- Add more scene presets
+- Add more features to the glTF loader (multiple materials support)
 
 ## **Milestone 2**
 Slides: https://docs.google.com/presentation/d/1AHIefwlu55ZyYZG1VEadliJOUGMHE7-N/edit?rtpof=true
