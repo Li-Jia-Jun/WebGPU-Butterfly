@@ -397,13 +397,13 @@ export default class GltfRenderer
 
 
         let material = this.gltf_group.gltf.materials;
-        let textures = this.gltf_group.gltf.textures;
 
 
-        // for (let i = 0; i<material.length; i++)
-        // {
 
-        // }
+        for (let i = 0; i<material.length; i++)
+        {
+            console.log("Material index:", i);
+        }
         //console.log("Material info: ", material);
         //console.log("Material info: ", material[0].normalTexture);
         
@@ -980,6 +980,44 @@ export default class GltfRenderer
         {
             for (const primitive of mesh.primitives) 
             {
+                let materialMapBuffer = this.device.createBuffer
+                ({
+                    size: 4 * Float32Array.BYTES_PER_ELEMENT,
+                    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+                }); 
+                let materialMap = new Float32Array(new ArrayBuffer(4 * Float32Array.BYTES_PER_ELEMENT), 0, 4);
+                materialMap.set(vec4.fromValues(primitive.material, 0, 0, 0));
+                this.device.queue.writeBuffer(materialMapBuffer, 0, materialMap);
+
+                let materialMapBindGroupLayout = this.device.createBindGroupLayout
+                (
+                    {
+                        label: 'Material Map BindGroupLayout',
+                        entries:
+                        [
+                            {
+                                binding: 0 ,
+                                visibility: GPUShaderStage.FRAGMENT,
+                                buffer: {type: 'uniform'},
+                            },
+                        ]
+                    }
+                );
+                let materialMapBindGroup = this.device.createBindGroup
+                ({
+                    label: 'Material Map Bindgroup',
+                    layout: materialMapBindGroupLayout,
+                    entries:
+                    [
+                        {
+                            binding: 0,
+                            resource: {buffer: materialMapBuffer}
+                        },
+                    ]
+                });
+                console.log("PRIMITIVE ID: ", primitive.material);
+
+
                 if (primitive.indices !== undefined) 
                 {
                     const accessor = this.gltf_group.gltf.accessors[primitive.indices];

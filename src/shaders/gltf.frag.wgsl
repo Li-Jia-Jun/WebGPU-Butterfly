@@ -4,6 +4,7 @@
 @group(0) @binding(5) var myMetallicRoughness:  texture_2d<f32>;  
 @group(0) @binding(6) var<uniform> textureInfo:  vec4<f32>;  
 
+@group(1) @binding(0) var<uniform> materialID: f32;
 
 // Some hardcoded lighting
 const lightDir = vec3(0.25, 0.5, 1.0);
@@ -80,6 +81,8 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
         metallic = metallicRoughness.b;
     }
     let finalColor = brdf(baseColor.rgb, metallic, roughness, lightDir, input.viewDir, N.xyz);
-    return vec4(finalColor, baseColor.a);
+    
+    return vec4(vec3(1  / (materialID + 1)), 1.0);
+    //return vec4(finalColor, baseColor.a);
     //return vec4(surfaceColor, baseColor.a);
 }
