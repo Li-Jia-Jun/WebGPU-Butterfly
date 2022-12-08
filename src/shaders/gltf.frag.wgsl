@@ -82,7 +82,6 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
     }
     let finalColor = brdf(baseColor.rgb, metallic, roughness, lightDir, input.viewDir, N.xyz);
     
-    return vec4(vec3(1  / (materialID + 1)), 1.0);
-    //return vec4(finalColor, baseColor.a);
+    return vec4(finalColor, baseColor.a);
     //return vec4(surfaceColor, baseColor.a);
 }

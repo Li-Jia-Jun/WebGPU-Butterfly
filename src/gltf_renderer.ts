@@ -76,6 +76,9 @@ export default class GltfRenderer
 
     constantBindGroupLayout: GPUBindGroupLayout;
     constantBindGroup : GPUBindGroup;
+    materialMapBindGroupLayout: GPUBindGroupLayout;
+    materialMapBindGroup: GPUBindGroup;
+
 
     // Pipeline
     gltfPipelineLayout : GPUPipelineLayout;
@@ -203,6 +206,8 @@ export default class GltfRenderer
                 this.constantBindGroupLayout,
                 this.frameBindGroupLayout,
                 this.nodeBindGroupLayout,
+                this.materialMapBindGroupLayout,
+
         ]});
 
         // Loop through each primitive of each mesh and create a compatible WebGPU pipeline.
@@ -348,7 +353,7 @@ export default class GltfRenderer
                 visibility: GPUShaderStage.VERTEX,
                 buffer: {},
             }],
-            });
+            });   
 
         // Find every node with a mesh and create a bind group containing the node's transform.
         for (const node of this.gltf_group.gltf.nodes)
@@ -919,7 +924,7 @@ export default class GltfRenderer
             let translate = new Float32Array(jointArrayBuffer, 0, 4);
 
             let rotation = new Float32Array(jointArrayBuffer, 4 * Float32Array.BYTES_PER_ELEMENT, 4);
-
+ 
             let scale = new Float32Array(jointArrayBuffer, 8 * Float32Array.BYTES_PER_ELEMENT, 4);
 
             let children = new Float32Array(jointArrayBuffer, 12 * Float32Array.BYTES_PER_ELEMENT, 8);
@@ -976,6 +981,23 @@ export default class GltfRenderer
         // Mark GPUBufferUsage by accessor for each bufferview 
         // since in many cases bufferviews do not have 'target' property
         const bufferViewUsages : Map<number, number> = new Map();
+
+
+        this.materialMapBindGroupLayout = this.device.createBindGroupLayout
+        (
+            {
+                label: 'Material Map BindGroupLayout',
+                entries:
+                [
+                    {
+                        binding: 0 ,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        buffer: {type: 'uniform'},
+                    },
+                ]
+            }
+        ); 
+       
         for (const mesh of this.gltf_group.gltf.meshes) 
         {
             for (const primitive of mesh.primitives) 
@@ -987,26 +1009,11 @@ export default class GltfRenderer
                 }); 
                 let materialMap = new Float32Array(new ArrayBuffer(4 * Float32Array.BYTES_PER_ELEMENT), 0, 4);
                 materialMap.set(vec4.fromValues(primitive.material, 0, 0, 0));
-                this.device.queue.writeBuffer(materialMapBuffer, 0, materialMap);
-
-                let materialMapBindGroupLayout = this.device.createBindGroupLayout
-                (
-                    {
-                        label: 'Material Map BindGroupLayout',
-                        entries:
-                        [
-                            {
-                                binding: 0 ,
-                                visibility: GPUShaderStage.FRAGMENT,
-                                buffer: {type: 'uniform'},
-                            },
-                        ]
-                    }
-                );
-                let materialMapBindGroup = this.device.createBindGroup
+                this.device.queue.writeBuffer(materialMapBuffer, 0, materialMap);              
+                this.materialMapBindGroup = this.device.createBindGroup
                 ({
                     label: 'Material Map Bindgroup',
-                    layout: materialMapBindGroupLayout,
+                    layout: this.materialMapBindGroupLayout,
                     entries:
                     [
                         {
@@ -1015,8 +1022,6 @@ export default class GltfRenderer
                         },
                     ]
                 });
-                console.log("PRIMITIVE ID: ", primitive.material);
-
 
                 if (primitive.indices !== undefined) 
                 {
@@ -1317,9 +1322,12 @@ export default class GltfRenderer
         {
             this.passEncoder.setBindGroup(2, bindGroup);
 
+
             const mesh = this.gltf_group.gltf.meshes[node.mesh];
             for (const primitive of mesh.primitives)
             {
+                this.passEncoder.setBindGroup(3, this.materialMapBindGroup);
+
                 const gpuPrimitive = this.primitiveGpuData.get(primitive);
 
                 this.passEncoder.setPipeline(gpuPrimitive.pipeline);
