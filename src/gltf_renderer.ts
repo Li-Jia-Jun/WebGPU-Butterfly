@@ -210,8 +210,6 @@ export default class GltfRenderer
                 this.materialBindGroupLayout,
         ]});
 
-        console.log("render pipeline layout done");
-
         // Loop through each primitive of each mesh and create a compatible WebGPU pipeline.
         for (const mesh of this.gltf_group.gltf.meshes) 
         {
@@ -400,6 +398,37 @@ export default class GltfRenderer
                 usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
             });
         }
+
+        this.constantBindGroupLayout = this.device.createBindGroupLayout
+        ({
+            label: `Constant BindGroupLayout`,
+            entries:
+            [{
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {type: 'uniform'}
+            },
+            {
+                binding: 1,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {type: 'read-only-storage'}
+            },]
+        });
+
+        this.constantBindGroup = this.device.createBindGroup
+        ({
+            label: `Constant BindGroup`,
+            layout: this.constantBindGroupLayout,
+            entries:
+            [{
+                binding: 0,
+                resource: {buffer: this.jointInfoBuffer}
+            },
+            {
+                binding: 1,
+                resource: {buffer: this.inverseBindMatrixBuffer}
+            },]
+        });
     }
 
     initMaterialBindGroupLayout()
@@ -434,16 +463,11 @@ export default class GltfRenderer
                 texture: {}
             }]
         });
-
-        console.log("material bind group layout done");
     }
-
 
     setupMaterialBindGroup(primitive : GLTFSpace.MeshPrimitive)
     {
         // For simplicity, assume gltf always has BaseColorTexture at least
-
-        console.log("material bind group start");
 
         let material = this.gltf_group.gltf.materials[primitive.material];
 
@@ -464,7 +488,7 @@ export default class GltfRenderer
 
         let baseColorGPUTexture = this.textures[baseColorSourImgIdx];
         let normalMapGPUTexture = normalMapImgIdx >= 0 ? this.textures[normalMapImgIdx] : this.emptyTexture;
-        let metallicRoughnessGPUTexture = metallicRoughnessImgIdx ? this.textures[metallicRoughnessImgIdx] : this.emptyTexture;
+        let metallicRoughnessGPUTexture = metallicRoughnessImgIdx >= 0 ? this.textures[metallicRoughnessImgIdx] : this.emptyTexture;
 
         let textureInfoArrayBuffer = new Float32Array([normalMapIdx, metallicRoughnessTextureIdx, 0, 0]).buffer;
         
@@ -565,8 +589,6 @@ export default class GltfRenderer
                 resource: metallicRoughnessGPUTexture.createView()
             }],   
         });
-
-        console.log("material bind group done");
     }
 
     initComputeBindGroup() {
@@ -641,7 +663,6 @@ export default class GltfRenderer
     initSkeletonsBindGroup() {
         //TODO: Two buffers: rootIndices, joints
         const hasSkeleton = this.hasJoint? 1:0;
-        // console.log("Has skeleton? ", hasSkeleton);
 
         let numJoint = -1;
         let numSkeleton = -1;
@@ -824,9 +845,8 @@ export default class GltfRenderer
             {
                 // Image is given as a bufferView.
                 const bufferView = this.gltf_group.gltf.bufferViews[image.bufferView];
-                //console.log(bufferView);
                 const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
-                //console.log(buffer);
+
                 blob = new Blob(
                     [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
                     { type: image.mimeType }
@@ -1035,8 +1055,6 @@ export default class GltfRenderer
             const shaderLocation = ShaderLocations[attribName];
             if (shaderLocation === undefined) { continue; }
 
-            //console.log("build vertex buffer layout for: " + attribName);
-
             // Create a new vertex buffer entry for the render pipeline that describes this
             // attribute. Implicitly assumes that one buffer will be bound per attribute, even if
             // the attribute data is interleaved.
@@ -1167,7 +1185,7 @@ export default class GltfRenderer
             const mesh = this.gltf_group.gltf.meshes[node.mesh];
             for (const primitive of mesh.primitives)
             {
-                this.setupMeshNodeBindGroup(primitive);
+                this.setupMaterialBindGroup(primitive);
                 this.passEncoder.setBindGroup(3, this.materialBindGroup);
 
                 const gpuPrimitive = this.primitiveGpuData.get(primitive);

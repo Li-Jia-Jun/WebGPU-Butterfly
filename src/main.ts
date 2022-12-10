@@ -126,17 +126,17 @@ export default class Application
 
     async initScene()
     {
-        const s = 1;
-
+        const t = [0, -10, 0];
+        const s = 0.08;
+        
         this.gltf_scene = new GLTFGroup();
         await this.gltf_scene.init(
-            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
-
-            //'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene.gltf',
+            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf-material/models/trees_and_foliage/scene2.gltf',        
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/BoxTextured/glTF/BoxTextured.gltf',
             1,
             ['Scene'],
-            [mat4.fromValues(s,0,0,0, 0,s,0,0, 0,0,s,0, 0,0,0,1)]);
+            [mat4.fromValues(s,0,0,0, 0,s,0,0, 0,0,s,0, t[0],t[1],t[2],1)]);
 
         const vertShader = this.device.createShaderModule({
             label: 'Scene Vert Shader',
@@ -258,7 +258,6 @@ export default class Application
     {
         // Update time
         this.time = timestamp * 0.001;
-        //console.log("time = " + this.time.toFixed(3));
 
         // Update Camera
         this.camera.frameCallback(timestamp);

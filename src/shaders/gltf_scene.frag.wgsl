@@ -5,11 +5,11 @@ struct MaterialInfo
 };
 
 // Material Bind Group (Refresh binding for each primitive)
-@group(2) @binding(0) var<uniform> materialInfo : MaterialInfo;
-@group(2) @binding(1) var mySampler: sampler;  // Assume all textures here uses the same sampler for simplicity
-@group(2) @binding(2) var baseColorTexture: texture_2d<f32>;
-@group(2) @binding(3) var normalMapTexture: texture_2d<f32>;
-@group(2) @binding(4) var metallicRoughnessTexture: texture_2d<f32>;
+@group(3) @binding(0) var<uniform> materialInfo : MaterialInfo;
+@group(3) @binding(1) var mySampler: sampler;  // Assume all textures here uses the same sampler for simplicity
+@group(3) @binding(2) var baseColorTexture: texture_2d<f32>;
+@group(3) @binding(3) var normalMapTexture: texture_2d<f32>;
+@group(3) @binding(4) var metallicRoughnessTexture: texture_2d<f32>;
 
 
 // Some hardcoded lighting
@@ -76,7 +76,6 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
 
     // Base Color 
     let baseColor = textureSample(baseColorTexture, mySampler, input.texcoord);
-    //let surfaceColor = (baseColor.rgb * ambientColor) + (baseColor.rgb * NDotL);
     let surfaceColor = (baseColor.rgb * NDotL);
 
     // Metallic and Roughness
@@ -98,9 +97,15 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
 
     let finalColor = brdf(baseColor.rgb, metallic, roughness, lightDir, input.viewDir, N.xyz) + amibient;
 
-    return vec4(baseColor);
+    // Alpha test
+    if(baseColor.a < 0.01)
+    {
+        discard;
+    }   
+
+    // return vec4(baseColor);
     //return vec4(vec3(1  / (materialID.x + 1)), 1.0);
     //return vec4(0.0);
-    //return vec4(surfaceColor, baseColor.a);
-    //return vec4(finalColor, baseColor.a);
+    return vec4(surfaceColor, baseColor.a);
+    // return vec4(finalColor, baseColor.a);
 }
