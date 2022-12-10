@@ -1,8 +1,15 @@
-@group(0) @binding(2) var mySampler: sampler;  
-@group(0) @binding(3) var myTexture:  texture_2d<f32>;  
-@group(0) @binding(4) var myNormal:  texture_2d<f32>;  
-@group(0) @binding(5) var myMetallicRoughness:  texture_2d<f32>;  
-@group(0) @binding(6) var<uniform> textureInfo:  vec4<f32>;  
+struct MaterialInfo
+{
+    propertyInfo : vec4<f32>, // [0] = metallic fatcor, [1] = roughness factor, the rest is unused yet
+    textureInfo : vec4<f32>,  // [0] = hasNormalMap, [1] = hasMetallicRoughnessTexture, the rest is unused yet
+};
+
+// Material Bind Group (Refresh binding for each primitive)
+@group(2) @binding(0) var<uniform> materialInfo : MaterialInfo;
+@group(2) @binding(1) var mySampler: sampler;  // Assume all textures here uses the same sampler for simplicity
+@group(2) @binding(2) var baseColorTexture: texture_2d<f32>;
+@group(2) @binding(3) var normalMapTexture: texture_2d<f32>;
+@group(2) @binding(4) var metallicRoughnessTexture: texture_2d<f32>;
 
 
 // Some hardcoded lighting
@@ -53,29 +60,36 @@ fn brdf(color: vec3<f32>,
 
 @fragment
 fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32> 
-{
-    // An extremely simple directional lighting model, just to give our model some shape.
+{   
+    // Normal
     var N: vec3<f32>;
-    if (textureInfo.x == 0.0)
+    if (materialInfo.textureInfo[0] < 0)
     {
         N = normalize(input.normal); 
     }
     else
     {
-        N = textureSample(myNormal, mySampler, input.texcoord).rgb;
+        N = textureSample(normalMapTexture, mySampler, input.texcoord).rgb;
     }
     let L = normalize(lightDir);
     let NDotL = max(dot(N.xyz, L), 0.0);
 
-    let baseColor = textureSample(myTexture, mySampler, input.texcoord);
+    // Base Color 
+    let baseColor = textureSample(baseColorTexture, mySampler, input.texcoord);
     //let surfaceColor = (baseColor.rgb * ambientColor) + (baseColor.rgb * NDotL);
     let surfaceColor = (baseColor.rgb * NDotL);
 
+    // Metallic and Roughness
     var roughness: f32 = 0.6;
     var metallic: f32 = 0.0;
-    if (textureInfo.y != 0.0)
+    if(materialInfo.textureInfo[1] < 0)
     {
-        let metallicRoughness = textureSample(myMetallicRoughness, mySampler, input.texcoord);
+        metallic = materialInfo.propertyInfo[0];
+        roughness = materialInfo.propertyInfo[1];
+    }
+    else
+    {
+        let metallicRoughness = textureSample(metallicRoughnessTexture, mySampler, input.texcoord);
         roughness = metallicRoughness.g;
         metallic = metallicRoughness.b;
     }
@@ -83,6 +97,10 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
     let amibient = vec3(0.1, 0.1, 0.1);
 
     let finalColor = brdf(baseColor.rgb, metallic, roughness, lightDir, input.viewDir, N.xyz) + amibient;
-    return vec4(surfaceColor, baseColor.a);
+
+    return vec4(baseColor);
+    //return vec4(vec3(1  / (materialID.x + 1)), 1.0);
+    //return vec4(0.0);
+    //return vec4(surfaceColor, baseColor.a);
     //return vec4(finalColor, baseColor.a);
 }
