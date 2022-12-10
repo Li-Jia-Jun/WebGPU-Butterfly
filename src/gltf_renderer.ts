@@ -38,11 +38,11 @@ class GPUPrimitiveInfo
 
 export default class GltfRenderer
 {
-    static loadImageSlots = [];
-
     // Associates a glTF node or primitive with its WebGPU resources
     primitiveGpuData : Map<GLTFSpace.MeshPrimitive, GPUPrimitiveInfo>;
     gpuBuffers : GPUBuffer[];
+    textures : GPUTexture[]; // Gltf.Images 
+    emptyTexture: GPUTexture;
    
     // GLTF stuff
     gltf_group : GLTFGroup;
@@ -68,11 +68,11 @@ export default class GltfRenderer
     jointInfoBuffer : GPUBuffer;
     inverseBindMatrixBuffer : GPUBuffer;
     
-    baseColorTexture: GPUTexture;
-    normalTexture: GPUTexture;
-    metallicRoughnessTexture: GPUTexture;
+    // Material Bind Group
+    materialBindGroup : GPUBindGroup;
+    materialBindGroupLayout: GPUBindGroupLayout;
+    materialInfoBuffer : GPUBuffer;
     textureSampler: GPUSampler;
-    textureInfoBuffer: GPUBuffer;
 
     constantBindGroupLayout: GPUBindGroupLayout;
     constantBindGroup : GPUBindGroup;
@@ -148,8 +148,8 @@ export default class GltfRenderer
 
         // Temp
         this.hasJoint = this.gltf_group.gltf.skins !== undefined && 
-        this.gltf_group.gltf.skins[0].joints !== undefined && 
-        this.gltf_group.gltf.skins[0].joints.length > 0 ? true : false;
+            this.gltf_group.gltf.skins[0].joints !== undefined && 
+            this.gltf_group.gltf.skins[0].joints.length > 0 ? true : false;
 
         this.nodeGpuData = new Map();
         this.primitiveGpuData = new Map();
@@ -180,9 +180,13 @@ export default class GltfRenderer
     {
         // Load all gltf data into GPUBuffers 
         await this.loadGPUBuffers();
+        await this.loadGPUTextures();
+
+        // Material Bind Group Layout
+        this.initMaterialBindGroupLayout();
 
         // Render Bind Groups
-        await this.initConstantBindGroup();
+        this.initConstantBindGroup();
         this.initFrameBindGroup();
         this.initNodeBindGroup();
 
@@ -203,12 +207,13 @@ export default class GltfRenderer
                 this.constantBindGroupLayout,
                 this.frameBindGroupLayout,
                 this.nodeBindGroupLayout,
+                this.materialBindGroupLayout,
         ]});
 
         // Loop through each primitive of each mesh and create a compatible WebGPU pipeline.
         for (const mesh of this.gltf_group.gltf.meshes) 
         {
-            for (const primitive of mesh.primitives) 
+            for (const primitive of mesh.primitives)
             {
                 this.setupPrimitive(primitive);
             }
@@ -360,7 +365,7 @@ export default class GltfRenderer
         }
     }
 
-    async initConstantBindGroup()
+    initConstantBindGroup()
     {
         // Joint info
         const hasJoint = this.hasJoint ? 1 : 0;
@@ -394,72 +399,114 @@ export default class GltfRenderer
             });
         }
 
+        this.constantBindGroupLayout = this.device.createBindGroupLayout
+        ({
+            label: `Constant BindGroupLayout`,
+            entries:
+            [{
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {type: 'uniform'}
+            },
+            {
+                binding: 1,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {type: 'read-only-storage'}
+            },]
+        });
 
+        this.constantBindGroup = this.device.createBindGroup
+        ({
+            label: `Constant BindGroup`,
+            layout: this.constantBindGroupLayout,
+            entries:
+            [{
+                binding: 0,
+                resource: {buffer: this.jointInfoBuffer}
+            },
+            {
+                binding: 1,
+                resource: {buffer: this.inverseBindMatrixBuffer}
+            },]
+        });
+    }
 
-        let material = this.gltf_group.gltf.materials;
-        let textures = this.gltf_group.gltf.textures;
+    initMaterialBindGroupLayout()
+    {
+        this.materialBindGroupLayout = this.device.createBindGroupLayout
+        ({
+            label: 'Material Bind Group Layout',
+            entries:
+            [{
+                binding: 0, // material info
+                visibility: GPUShaderStage.FRAGMENT,
+                buffer: {type: 'uniform'}
+            },
+            {
+                binding: 1, // sampler
+                visibility: GPUShaderStage.FRAGMENT,
+                sampler: {}
+            },
+            {
+                binding: 2, // base color texture
+                visibility: GPUShaderStage.FRAGMENT,
+                texture: {}
+            },
+            {
+                binding: 3, // normal map
+                visibility: GPUShaderStage.FRAGMENT,
+                texture: {}
+            },
+            {
+                binding: 4, // metallic roughness texture
+                visibility: GPUShaderStage.FRAGMENT,
+                texture: {}
+            }]
+        });
+    }
 
+    setupMaterialBindGroup(primitive : GLTFSpace.MeshPrimitive)
+    {
+        // For simplicity, assume gltf always has BaseColorTexture at least
 
-        // for (let i = 0; i<material.length; i++)
-        // {
+        let material = this.gltf_group.gltf.materials[primitive.material];
 
-        // }
-        //console.log("Material info: ", material);
-        //console.log("Material info: ", material[0].normalTexture);
+        // Property
+        let metallicFactor = material.pbrMetallicRoughness.metallicFactor ? material.pbrMetallicRoughness.metallicFactor : 0;
+        let roughnessFactor = material.pbrMetallicRoughness.roughnessFactor ? material.pbrMetallicRoughness.roughnessFactor : 0;
+        let propertyArrayBuffer = new Float32Array([metallicFactor, roughnessFactor, 0, 0]).buffer;
+
+        // Textures
+        let baseColorIdx = material.pbrMetallicRoughness.baseColorTexture.index;
+        let normalMapIdx = material.normalTexture !== undefined ? material.normalTexture.index : -1;
+        let metallicRoughnessTextureIdx = material.pbrMetallicRoughness.metallicRoughnessTexture !== undefined ? 
+            material.pbrMetallicRoughness.metallicRoughnessTexture.index : -1;
+
+        let baseColorSourImgIdx = this.gltf_group.gltf.textures[baseColorIdx].source;
+        let normalMapImgIdx = normalMapIdx >= 0 ? this.gltf_group.gltf.textures[normalMapIdx].source : -1;
+        let metallicRoughnessImgIdx = metallicRoughnessTextureIdx >= 0 ? this.gltf_group.gltf.textures[metallicRoughnessTextureIdx].source : -1;
+
+        let baseColorGPUTexture = this.textures[baseColorSourImgIdx];
+        let normalMapGPUTexture = normalMapImgIdx >= 0 ? this.textures[normalMapImgIdx] : this.emptyTexture;
+        let metallicRoughnessGPUTexture = metallicRoughnessImgIdx >= 0 ? this.textures[metallicRoughnessImgIdx] : this.emptyTexture;
+
+        let textureInfoArrayBuffer = new Float32Array([normalMapIdx, metallicRoughnessTextureIdx, 0, 0]).buffer;
         
-        let hasNormalMap = material[0].normalTexture != undefined ? 1 : 0;
-        let hasMetallicRoughness= material[0].pbrMetallicRoughness.metallicRoughnessTexture !== undefined ? 1 : 0;
-
-        //console.log("Material info: ", material[0].pbrMetallicRoughness.baseColorTexture);
-        //console.log("Material info: ", material[0].pbrMetallicRoughness.roughnessFactor);
-        //console.log("Material info: ", material[0].pbrMetallicRoughness.metallicFactor);
-
-        this.textureInfoBuffer = this.device.createBuffer
-            ({            
-                size: 4 * Float32Array.BYTES_PER_ELEMENT,
+        // Material Info Buffer
+        if(this.materialInfoBuffer == undefined)
+        {
+            this.materialInfoBuffer = this.device.createBuffer({
+                size: 8 * Float32Array.BYTES_PER_ELEMENT,
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
             });
-
-        let textureInfoArrayBuffer = new ArrayBuffer(4 * Float32Array.BYTES_PER_ELEMENT);
-        let textureInfoArray = new Float32Array(textureInfoArrayBuffer, 0, 4);
-        textureInfoArray.set(vec4.fromValues(hasNormalMap, hasMetallicRoughness, 0, 0));
-        this.device.queue.writeBuffer(this.textureInfoBuffer, 0, textureInfoArrayBuffer);
-
-        let baseColorTextureIdx = material[0].pbrMetallicRoughness.baseColorTexture.index;
-        let normalTextureIdx = -1;
-        let metallicRoughnessTextureIdx  = -1
-
-        if (hasNormalMap)
-        {
-            normalTextureIdx = material[0].normalTexture.index;
-            console.log("Normal map index:",normalTextureIdx );
         }
-        if (hasMetallicRoughness)
+        this.device.queue.writeBuffer(this.materialInfoBuffer, 0, propertyArrayBuffer);
+        this.device.queue.writeBuffer(this.materialInfoBuffer, 4 * Float32Array.BYTES_PER_ELEMENT, textureInfoArrayBuffer);
+
+        // Sampler (For simplicity, use base color texture sampler for all)
+        const sampler = this.gltf_group.gltf.samplers[this.gltf_group.gltf.textures[baseColorIdx].sampler];
+        if (sampler !== undefined)
         {
-            metallicRoughnessTextureIdx= material[0].pbrMetallicRoughness.metallicRoughnessTexture.index;
-            console.log("metallicRoughnessTextureIdx map index:", metallicRoughnessTextureIdx);
-        }
-
-        console.log('normalTextureIdx:', normalTextureIdx);
-        console.log('metallicRoughnessTextureIdx:', metallicRoughnessTextureIdx);
-        if (normalTextureIdx == undefined)
-        {
-            console.log("No normal texture");
-        }
-
-        if (metallicRoughnessTextureIdx == undefined)
-        {
-            console.log("No MR texture");
-        }
-
-
-        //console.log("Texture info: ", texture, texture.length);
-        const hasSampler = this.gltf_group.gltf.samplers[0] !== undefined ? 1:0;
-        if (hasSampler)
-        {
-            console.log("Sampler", this.gltf_group.gltf.samplers[0]);
-            let sampler = this.gltf_group.gltf.samplers[0];
-
             function gpuAddressModeForWrap(wrap) {
                 switch (wrap) {
                   case WebGLRenderingContext.CLAMP_TO_EDGE: return 'clamp-to-edge';
@@ -514,198 +561,33 @@ export default class GltfRenderer
                 }
             )
         }
-         
-            let gltf = this.gltf_group.gltf;
-
-            // Base Color Texture
-            let baseColorTexture = this.gltf_group.gltf.images[baseColorTextureIdx];
-            let blob;
-            if (baseColorTexture.uri) {
-                // Image is given as a URI
-                console.log(gltf.asset);
-                //const response = await this.gltf_group.gltf.imageData.get(this.gltf_group.gltf.images[baseColorTextureIdx]);
-                blob = await this.gltf_group.asset.imageData.get(baseColorTextureIdx);
-                //const response = await fetch(baseColorTexture.uri);
-                //blob = await response.blob();
-            } 
-              else {
-                // Image is given as a bufferView.
-                const bufferView = gltf.bufferViews[baseColorTexture.bufferView];
-                //console.log(bufferView);
-                const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
-                //console.log(buffer);
-                blob = new Blob(
-                  [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
-                  { type: baseColorTexture.mimeType }
-                );
-              }
-            let imgBitmap = await createImageBitmap(blob);
-            this.baseColorTexture = this.device.createTexture
-            ({
-                size: { width: imgBitmap.width, height: imgBitmap.height },
-                format: 'rgba8unorm',
-                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
-            });
-            this.device.queue.copyExternalImageToTexture(
-            { source: imgBitmap },
-            { texture: this.baseColorTexture },
-            [imgBitmap.width, imgBitmap.height]
-            );
-
-
-                const emptyTexture = this.device.createTexture(
-                    {
-                        size: {width: 1, height: 1},
-                        format: 'rgba8unorm',
-                        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
-                    }
-                );
-
-
-            // Normal
-            if (hasNormalMap)
-            {
-                let normalTexture = this.gltf_group.gltf.images[normalTextureIdx];
-                //let blob;
-                if (normalTexture.uri) {
-                    // Image is given as a URI
-                    blob = await this.gltf_group.asset.imageData.get(normalTextureIdx);
-                } 
-                else {
-                    // Image is given as a bufferView.
-                    const bufferView = gltf.bufferViews[normalTexture.bufferView];
-                    //console.log(bufferView);
-                    const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
-                    //console.log(buffer);
-                    blob = new Blob(
-                    [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
-                    { type: normalTexture.mimeType }
-                    );
-                }
-                imgBitmap = await createImageBitmap(blob);
-                this.normalTexture = this.device.createTexture
-                ({
-                    size: { width: imgBitmap.width, height: imgBitmap.height },
-                    format: 'rgba8unorm',
-                    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
-                });
-                this.device.queue.copyExternalImageToTexture(
-                { source: imgBitmap },
-                { texture: this.normalTexture },
-                [imgBitmap.width, imgBitmap.height]
-                );
-                }
-                if (hasMetallicRoughness)
-                {
-                // metallic and roughness
-                let metallicRoughnessTexture = this.gltf_group.gltf.images[metallicRoughnessTextureIdx];
-                //let blob;
-                if (metallicRoughnessTexture.uri) {
-                    // Image is given as a URI
-                    blob = await this.gltf_group.asset.imageData.get(metallicRoughnessTextureIdx);
-                    } 
-                    else {
-                    // Image is given as a bufferView.
-                    const bufferView = gltf.bufferViews[metallicRoughnessTexture.bufferView];
-                    //console.log(bufferView);
-                    const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
-                    //console.log(buffer);
-                    blob = new Blob(
-                        [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
-                        { type: metallicRoughnessTexture.mimeType }
-                    );
-                    }
-                imgBitmap = await createImageBitmap(blob);
-                this.metallicRoughnessTexture = this.device.createTexture
-                ({
-                    size: { width: imgBitmap.width, height: imgBitmap.height },
-                    format: 'rgba8unorm',
-                    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
-                });
-                this.device.queue.copyExternalImageToTexture(
-                { source: imgBitmap },
-                { texture: this.metallicRoughnessTexture },
-                [imgBitmap.width, imgBitmap.height]
-                );
-            }
-            
-
-        this.constantBindGroupLayout = this.device.createBindGroupLayout
+        
+        // Create Bind Group
+        this.materialBindGroup = this.device.createBindGroup
         ({
-            label: `Constant BindGroupLayout`,
+            label: 'Material BindGroup', 
+            layout: this.materialBindGroupLayout,
             entries:
             [{
                 binding: 0,
-                visibility: GPUShaderStage.VERTEX,
-                buffer: {type: 'uniform'}
+                resource: {buffer: this.materialInfoBuffer}
             },
             {
                 binding: 1,
-                visibility: GPUShaderStage.VERTEX,
-                buffer: {type: 'read-only-storage'}
+                resource: this.textureSampler
             },
             {
                 binding: 2,
-                visibility: GPUShaderStage.FRAGMENT,
-                sampler: {}
+                resource: baseColorGPUTexture.createView()
             },
             {
                 binding: 3,
-                visibility: GPUShaderStage.FRAGMENT,
-                texture: {}
+                resource: normalMapGPUTexture.createView()
             },
             {
                 binding: 4,
-                visibility: GPUShaderStage.FRAGMENT,
-                texture: {}  
-            },
-            {
-                binding: 5,
-                visibility: GPUShaderStage.FRAGMENT,
-                texture: {}  
-            },
-            {
-                binding: 6,
-                visibility:GPUShaderStage.FRAGMENT,
-                buffer: {type: 'uniform'}
-            },
-        ]
-        });
-
-        this.constantBindGroup = this.device.createBindGroup
-        ({
-            label: `Constant BindGroup`,
-            layout: this.constantBindGroupLayout,
-            entries:
-            [{
-                binding: 0,
-                resource: {buffer: this.jointInfoBuffer}
-            },
-            {
-                binding: 1,
-                resource: {buffer: this.inverseBindMatrixBuffer}
-            },
-            {
-                binding: 2,
-                resource: this.textureSampler,
-            },
-            {
-                binding: 3,
-                resource: this.baseColorTexture.createView(),
-            },
-            {
-                binding: 4,
-                resource: hasNormalMap? this.normalTexture.createView() : emptyTexture.createView(),
-            },
-            {
-                binding: 5,
-                resource: hasMetallicRoughness? this.metallicRoughnessTexture.createView() : emptyTexture.createView(),
-            },
-            {
-                binding: 6,
-                resource: {buffer: this.textureInfoBuffer}
-            },
-        ]
+                resource: metallicRoughnessGPUTexture.createView()
+            }],   
         });
     }
 
@@ -781,7 +663,6 @@ export default class GltfRenderer
     initSkeletonsBindGroup() {
         //TODO: Two buffers: rootIndices, joints
         const hasSkeleton = this.hasJoint? 1:0;
-        // console.log("Has skeleton? ", hasSkeleton);
 
         let numJoint = -1;
         let numSkeleton = -1;
@@ -940,28 +821,6 @@ export default class GltfRenderer
         }
     }
 
-    async loadImage(gltf, image)
-    {
-        let blob;
-        if (image.uri) {
-            // Image is given as a URI
-            const response = await fetch(image.uri);
-            blob = await response.blob();
-          } else {
-            // Image is given as a bufferView.
-            const bufferView = gltf.bufferViews[image.bufferView];
-            console.log(bufferView);
-            const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
-            console.log(buffer);
-            blob = new Blob(
-              [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
-              { type: image.mimeType }
-            );
-          }
-        const imgBitmap = await createImageBitmap(blob);
-        return imgBitmap;
-    }
-
     async getArrayBufferForGltfBuffer(bufferView)
     {   
         let wholeArray = new Uint8Array(10);
@@ -969,6 +828,55 @@ export default class GltfRenderer
 
         let subArray = wholeArray.subarray(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
         return subArray;
+    }
+
+    async loadGPUTextures()
+    {
+        // Load all textures into GPUTexture
+        this.textures = new Array();       
+        for(const [index, image] of this.gltf_group.gltf.images.entries())
+        {
+            let blob;
+            if(image.uri)
+            {
+                blob = await this.gltf_group.asset.imageData.get(index);
+            }
+            else
+            {
+                // Image is given as a bufferView.
+                const bufferView = this.gltf_group.gltf.bufferViews[image.bufferView];
+                const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
+
+                blob = new Blob(
+                    [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
+                    { type: image.mimeType }
+                );
+            }
+
+            let imgBitmap = await createImageBitmap(blob);
+
+            let newTexture = this.device.createTexture({
+                size: { width: imgBitmap.width, height: imgBitmap.height },
+                format: 'rgba8unorm',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
+            });
+
+            this.device.queue.copyExternalImageToTexture(
+                { source: imgBitmap },
+                { texture: newTexture },
+                [ imgBitmap.width, imgBitmap.height]);
+
+            this.textures.push(newTexture);
+        }
+
+        // Create an empty texture for default texture value
+        this.emptyTexture = this.device.createTexture({
+            size: { width: 1, height: 1 },
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+
+        
     }
 
     async loadGPUBuffers()
@@ -1105,8 +1013,6 @@ export default class GltfRenderer
 
                 const accessor = this.gltf_group.gltf.accessors[accessorIndex];
                 const bufferView = this.gltf_group.gltf.bufferViews[accessor.bufferView];
-                
-                // console.log("build vertex buffer layout for: " + attribName);
 
                 // Create a new vertex buffer entry for the render pipeline that describes this
                 // attribute. Implicitly assumes that one buffer will be bound per attribute, even if
@@ -1148,8 +1054,6 @@ export default class GltfRenderer
             // attribute because we don't need it for rendering (yet).
             const shaderLocation = ShaderLocations[attribName];
             if (shaderLocation === undefined) { continue; }
-
-            //console.log("build vertex buffer layout for: " + attribName);
 
             // Create a new vertex buffer entry for the render pipeline that describes this
             // attribute. Implicitly assumes that one buffer will be bound per attribute, even if
@@ -1221,7 +1125,6 @@ export default class GltfRenderer
 
     renderGLTF()
     {
-        //console.log("can render = " + this.canRender);
         if(!this.canRender)
         {
             return;
@@ -1282,6 +1185,9 @@ export default class GltfRenderer
             const mesh = this.gltf_group.gltf.meshes[node.mesh];
             for (const primitive of mesh.primitives)
             {
+                this.setupMaterialBindGroup(primitive);
+                this.passEncoder.setBindGroup(3, this.materialBindGroup);
+
                 const gpuPrimitive = this.primitiveGpuData.get(primitive);
 
                 this.passEncoder.setPipeline(gpuPrimitive.pipeline);
