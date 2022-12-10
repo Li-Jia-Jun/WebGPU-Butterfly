@@ -132,7 +132,7 @@ export default class Application
         this.gltf_scene = new GLTFGroup();
         await this.gltf_scene.init(
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
-            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/gltf-material/models/trees_and_foliage/scene2.gltf',        
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene2.gltf',        
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/BoxTextured/glTF/BoxTextured.gltf',
             1,
             ['Scene'],
