@@ -9,7 +9,7 @@ export default class FlyingCamera {
     _rotMat = mat4.create();
     _dirty = true;
 
-    speed = 3;
+    speed = 10;
     mouseSpeed = 0.01;
 
     _pressedKeys = new Array(128);

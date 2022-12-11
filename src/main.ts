@@ -82,7 +82,8 @@ export default class Application
 
             // HTML stuff
             this.canvas = document.getElementById('gfx') as HTMLCanvasElement;
-            this.canvas.width = this.canvas.height = 800;
+            this.canvas.width = 1920; 
+            this.canvas.height = 1080;
             this.#camPosDisplay = document.getElementById("camera_pos") as HTMLParagraphElement;
             this.resizeBackings();
 
