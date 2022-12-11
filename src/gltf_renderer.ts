@@ -473,40 +473,50 @@ export default class GltfRenderer
 
         let material = this.gltf_group.gltf.materials[primitive.material];
 
+        let noPbr = material.pbrMetallicRoughness === undefined;
+
         // Property
-        let metallicFactor = material.pbrMetallicRoughness.metallicFactor ? material.pbrMetallicRoughness.metallicFactor : 0;
-        let roughnessFactor = material.pbrMetallicRoughness.roughnessFactor ? material.pbrMetallicRoughness.roughnessFactor : 0;
+        let baseColorFactor = noPbr || material.pbrMetallicRoughness.baseColorFactor === undefined ? [1,1,1,1] : material.pbrMetallicRoughness.baseColorFactor;
+        let baseColorFactorArrayBuffer = new Float32Array(baseColorFactor).buffer;
+
+        // console.log("baseColorFactor = " + baseColorFactor);
+
+        let metallicFactor = noPbr || material.pbrMetallicRoughness.metallicFactor === undefined ? 0 : material.pbrMetallicRoughness.metallicFactor;
+        let roughnessFactor = noPbr || material.pbrMetallicRoughness.roughnessFactor === undefined ? 0 : material.pbrMetallicRoughness.roughnessFactor;
         let propertyArrayBuffer = new Float32Array([metallicFactor, roughnessFactor, 0, 0]).buffer;
 
-        // Textures
-        let baseColorIdx = material.pbrMetallicRoughness.baseColorTexture.index;
-        let normalMapIdx = material.normalTexture !== undefined ? material.normalTexture.index : -1;
-        let metallicRoughnessTextureIdx = material.pbrMetallicRoughness.metallicRoughnessTexture !== undefined ? 
-            material.pbrMetallicRoughness.metallicRoughnessTexture.index : -1;
 
-        let baseColorSourImgIdx = this.gltf_group.gltf.textures[baseColorIdx].source;
+        // Textures
+        let baseColorIdx = noPbr || material.pbrMetallicRoughness.baseColorTexture === undefined ? -1 : material.pbrMetallicRoughness.baseColorTexture.index;
+        let normalMapIdx = material.normalTexture === undefined ? -1 : material.normalTexture.index;
+        let metallicRoughnessTextureIdx = noPbr || material.pbrMetallicRoughness.metallicRoughnessTexture === undefined ? -1 : material.pbrMetallicRoughness.metallicRoughnessTexture.index;
+
+        let baseColorSourImgIdx = baseColorIdx >= 0 ? this.gltf_group.gltf.textures[baseColorIdx].source : -1;
         let normalMapImgIdx = normalMapIdx >= 0 ? this.gltf_group.gltf.textures[normalMapIdx].source : -1;
         let metallicRoughnessImgIdx = metallicRoughnessTextureIdx >= 0 ? this.gltf_group.gltf.textures[metallicRoughnessTextureIdx].source : -1;
 
-        let baseColorGPUTexture = this.textures[baseColorSourImgIdx];
+
+        let baseColorGPUTexture = baseColorSourImgIdx >= 0 ? this.textures[baseColorSourImgIdx] : this.emptyTexture;
         let normalMapGPUTexture = normalMapImgIdx >= 0 ? this.textures[normalMapImgIdx] : this.emptyTexture;
         let metallicRoughnessGPUTexture = metallicRoughnessImgIdx >= 0 ? this.textures[metallicRoughnessImgIdx] : this.emptyTexture;
 
-        let textureInfoArrayBuffer = new Float32Array([normalMapIdx, metallicRoughnessTextureIdx, 0, 0]).buffer;
+
+        let textureInfoArrayBuffer = new Float32Array([baseColorIdx, normalMapIdx, metallicRoughnessTextureIdx, 0]).buffer;
         
         // Material Info Buffer
         if(this.materialInfoBuffer == undefined)
         {
             this.materialInfoBuffer = this.device.createBuffer({
-                size: 8 * Float32Array.BYTES_PER_ELEMENT,
+                size: 12 * Float32Array.BYTES_PER_ELEMENT,
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
             });
         }
-        this.device.queue.writeBuffer(this.materialInfoBuffer, 0, propertyArrayBuffer);
-        this.device.queue.writeBuffer(this.materialInfoBuffer, 4 * Float32Array.BYTES_PER_ELEMENT, textureInfoArrayBuffer);
+        this.device.queue.writeBuffer(this.materialInfoBuffer, 0, baseColorFactorArrayBuffer);
+        this.device.queue.writeBuffer(this.materialInfoBuffer, 4 * Float32Array.BYTES_PER_ELEMENT, propertyArrayBuffer);
+        this.device.queue.writeBuffer(this.materialInfoBuffer, 8 * Float32Array.BYTES_PER_ELEMENT, textureInfoArrayBuffer);
 
         // Sampler (For simplicity, use base color texture sampler for all)
-        const sampler = this.gltf_group.gltf.samplers[this.gltf_group.gltf.textures[baseColorIdx].sampler];
+        const sampler = (baseColorIdx >= 0 || normalMapIdx >= 0) ? this.gltf_group.gltf.samplers[this.gltf_group.gltf.textures[baseColorIdx].sampler] : undefined;
         if (sampler !== undefined)
         {
             function gpuAddressModeForWrap(wrap) {
@@ -552,7 +562,7 @@ export default class GltfRenderer
         // If no sampler specified, use the default configuration
         else
         {
-            console.log("Default Sampler used");
+            // console.log("Default Sampler used");
             this.textureSampler = this.device.createSampler(
                 {
                     addressModeU: 'repeat',
@@ -847,40 +857,45 @@ export default class GltfRenderer
     async loadGPUTextures()
     {
         // Load all textures into GPUTexture
+
         this.textures = new Array();       
-        for(const [index, image] of this.gltf_group.gltf.images.entries())
+
+        if(this.gltf_group.gltf.images !== undefined)
         {
-            let blob;
-            if(image.uri)
+            for(const [index, image] of this.gltf_group.gltf.images.entries())
             {
-                blob = await this.gltf_group.asset.imageData.get(index);
+                let blob;
+                if(image.uri)
+                {
+                    blob = await this.gltf_group.asset.imageData.get(index);
+                }
+                else
+                {
+                    // Image is given as a bufferView.
+                    const bufferView = this.gltf_group.gltf.bufferViews[image.bufferView];
+                    const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
+    
+                    blob = new Blob(
+                        [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
+                        { type: image.mimeType }
+                    );
+                }
+    
+                let imgBitmap = await createImageBitmap(blob);
+    
+                let newTexture = this.device.createTexture({
+                    size: { width: imgBitmap.width, height: imgBitmap.height },
+                    format: 'rgba8unorm',
+                    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
+                });
+    
+                this.device.queue.copyExternalImageToTexture(
+                    { source: imgBitmap },
+                    { texture: newTexture },
+                    [ imgBitmap.width, imgBitmap.height]);
+    
+                this.textures.push(newTexture);
             }
-            else
-            {
-                // Image is given as a bufferView.
-                const bufferView = this.gltf_group.gltf.bufferViews[image.bufferView];
-                const buffer = await this.getArrayBufferForGltfBuffer(bufferView);
-
-                blob = new Blob(
-                    [new Uint8Array(buffer, bufferView.byteOffset, bufferView.byteLength)],
-                    { type: image.mimeType }
-                );
-            }
-
-            let imgBitmap = await createImageBitmap(blob);
-
-            let newTexture = this.device.createTexture({
-                size: { width: imgBitmap.width, height: imgBitmap.height },
-                format: 'rgba8unorm',
-                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |GPUTextureUsage.RENDER_ATTACHMENT,
-            });
-
-            this.device.queue.copyExternalImageToTexture(
-                { source: imgBitmap },
-                { texture: newTexture },
-                [ imgBitmap.width, imgBitmap.height]);
-
-            this.textures.push(newTexture);
         }
 
         // Create an empty texture for default texture value
@@ -1066,8 +1081,14 @@ export default class GltfRenderer
 
             // Get the shader location for this attribute. If it doesn't have one skip over the
             // attribute because we don't need it for rendering (yet).
-            const shaderLocation = ShaderLocations[attribName];
-            if (shaderLocation === undefined) { continue; }
+            const loc = ShaderLocations[attribName];
+            if (loc === undefined) 
+            { 
+
+                continue; 
+            }
+
+            // const loc = ShaderLocations[attribName];
 
             // Create a new vertex buffer entry for the render pipeline that describes this
             // attribute. Implicitly assumes that one buffer will be bound per attribute, even if
@@ -1077,7 +1098,7 @@ export default class GltfRenderer
                 attributes : [{                
                     format: GLTFUtil.gpuFormatForAccessor(accessor) as GPUVertexFormat,
                     offset: 0,  // Explicitly set to zero now.
-                    shaderLocation: shaderLocation}]
+                    shaderLocation: loc}]
             });
 
             // Since we're skipping some attributes, we need to track the WebGPU buffers that are

@@ -1,7 +1,8 @@
 struct MaterialInfo
 {
+    baseColorFactor : vec4<f32>,
     propertyInfo : vec4<f32>, // [0] = metallic fatcor, [1] = roughness factor, the rest is unused yet
-    textureInfo : vec4<f32>,  // [0] = hasNormalMap, [1] = hasMetallicRoughnessTexture, the rest is unused yet
+    textureInfo : vec4<f32>,  // [0] = hasBaseColor, [1] = hasNormalMap, [2] = hasMetallicRoughnessTexture, the rest is unused yet
 };
 
 // Material Bind Group (Refresh binding for each primitive)
@@ -61,9 +62,16 @@ fn brdf(color: vec3<f32>,
 @fragment
 fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32> 
 {   
+    // Base Color 
+    var baseColor = materialInfo.baseColorFactor;
+    if(materialInfo.textureInfo[0] >= 0)
+    {
+        baseColor = textureSample(baseColorTexture, mySampler, input.texcoord);
+    }
+
     // Normal
     var N: vec3<f32>;
-    if (materialInfo.textureInfo[0] < 0)
+    if (materialInfo.textureInfo[1] < 0)
     {
         N = normalize(input.normal); 
     }
@@ -74,14 +82,13 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
     let L = normalize(lightDir);
     let NDotL = max(dot(N.xyz, L), 0.0);
 
-    // Base Color 
-    let baseColor = textureSample(baseColorTexture, mySampler, input.texcoord);
+    
     let surfaceColor = (baseColor.rgb * NDotL);
 
     // Metallic and Roughness
     var roughness: f32 = 0.6;
     var metallic: f32 = 0.0;
-    if(materialInfo.textureInfo[1] < 0)
+    if(materialInfo.textureInfo[2] < 0)
     {
         metallic = materialInfo.propertyInfo[0];
         roughness = materialInfo.propertyInfo[1];
@@ -104,7 +111,6 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
     }   
 
     // return vec4(baseColor);
-    //return vec4(vec3(1  / (materialID.x + 1)), 1.0);
     //return vec4(0.0);
     return vec4(surfaceColor, baseColor.a);
     // return vec4(finalColor, baseColor.a);
