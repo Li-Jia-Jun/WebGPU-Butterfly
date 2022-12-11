@@ -93,14 +93,14 @@ export default class Application
         }
     }
 
-    getButterflyPos(num: number, idx: number)
+    getButterflyPos(num: number, idx: number, scale: number)
     {
         let cubeVal = Math.ceil(Math.cbrt(num)) + 0.5;
         let invCubeVal = 1.0 / cubeVal;
         let x = idx % (cubeVal - 1);
         let y = (idx / (cubeVal - 1) )% (cubeVal - 1);
         let z = idx / ((cubeVal-1) * (cubeVal - 1));
-        let newTrans = [x + Math.random() * invCubeVal, y + Math.random() * invCubeVal, z + Math.random() * invCubeVal]; 
+        let newTrans = [x + Math.random() * invCubeVal * scale, y + Math.random() * invCubeVal * scale, z + Math.random() * invCubeVal * scale]; 
         return newTrans;
     }
 
@@ -119,7 +119,7 @@ export default class Application
             let newName = ("b"+(i+1).toString());
             instance_name.push(newName);
             let even = (i % 2 == 0);
-            let newTrans = this.getButterflyPos(controls.instance_num, i);
+            let newTrans = this.getButterflyPos(controls.instance_num, i, s);
             let newMat =  [s,0,0,0,  0,s,0,0,  0,0,s,0, s * 5 * newTrans[0], s *  5  * newTrans[1],s * 5 * newTrans[2],1]
             instance_trans.push(newMat);
         }
