@@ -136,13 +136,18 @@ export default class Application
     
     async initScene()
     {
-        const t = [0, -10, 0];
-        const s = 0.08;
-        
+        // const t = [0, -10, 0];
+        // const s = 0.08;
+        const t = [0, 0, 0];
+        const s = 0.5;
+
         this.gltf_scene = new GLTFGroup();
         await this.gltf_scene.init(
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
+            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/low_poly_nature/scene.gltf',
+            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/low_poly_landscape_2/scene2.gltf',
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
-            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene2.gltf',        
+            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene2.gltf',        
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/BoxTextured/glTF/BoxTextured.gltf',
             1,
             ['Scene'],
