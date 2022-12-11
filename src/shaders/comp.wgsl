@@ -143,30 +143,32 @@ fn flapWings(idx: u32)
   var cycle = (sin(time.value * speed + f32(idx)) + 1) / 2;  
   //var cycle = 1.0;
 
-  var jointIndex = 8; // Bone.009
-  var defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, -30 * cycle,  0 * cycle, 0);
+  var jointIndex = 4; // RF
+   var defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
+   jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  70 * cycle, 0);
 
-  jointIndex = 10; // Bone.011
+  jointIndex = 2; // RR
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  //jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(30 * cycle, 0  * cycle, -0 * cycle, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  55 * cycle, 0);
 
-   jointIndex = 15; // Bone.004 
-   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-   jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 30 * cycle, 0 * cycle, 0);
-
-  jointIndex = 18; // Bone.018
+  jointIndex = 6; // RM
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-//  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(0, 30 * cycle, 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  45 * cycle, 0);
 
-  jointIndex = 19; // Bone.019
-  defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 30 * cycle,  0 * cycle, 0);
 
-  jointIndex = 26; // Bone.026
+  jointIndex = 5; // LF
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, -30 * cycle, 0 * cycle, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  -70 * cycle, 0);
+
+  jointIndex = 3; // LR
+  defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  -55 * cycle, 0);
+  
+  jointIndex = 7; // LM
+  defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  -45 * cycle, 0);
 }
+
 
 fn updateVelocity(v: vec4<f32>, force: vec4<f32>, dt: f32) -> vec4<f32>
 {
@@ -269,9 +271,9 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
 
 
   //velocitiesData[idx] = vDesired;
-  m_translate = translate(m_translate,vDesired.x * deltaTime, vDesired.y * deltaTime, vDesired.z * deltaTime);
+  //m_translate = translate(m_translate,vDesired.x * deltaTime, vDesired.y * deltaTime, vDesired.z * deltaTime);
    //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
-  //m_translate = translate(m_translate,0, 0.0, 0);
+  m_translate = translate(m_translate,0, 0.0, 0);
 
 
   //x, y, z rotation

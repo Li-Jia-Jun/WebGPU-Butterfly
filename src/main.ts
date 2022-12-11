@@ -201,7 +201,7 @@ export default class Application
         });
 
         await this.gltf_butterfly.init(
-            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-final.gltf',
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-new-skel.gltf',
             controls.instance_num,
             instance_name,
             instance_trans);
