@@ -16,9 +16,9 @@ struct Joints {
 //   velocity: vec3<f32>
 // }
 
-struct Velocities {
-  velocities:  array<vec3<f32>>
-}
+// struct Velocities {
+//   velocities:  array<vec3<f32>>
+// }
 
 struct Time {
     value : f32,
@@ -42,14 +42,17 @@ struct SkeletonInfo
 @group(0) @binding(1) var<uniform> time: Time;
 //joint transformation matrix (The joint pose output)
 @group(0) @binding(2) var<storage, read_write> jointTransforms: array<mat4x4<f32>>;
-@group(0) @binding(3) var<storage, read_write> velocitiesData: array<vec3<f32>>;
+@group(0) @binding(3) var<storage, read_write> velocitiesData: array<vec4<f32>>;
+@group(0) @binding(4) var<storage, read_write> forwardData: array<vec4<f32>>;
+
+
 
 //skeleton information
 @group(1) @binding(0) var<storage> skeletonInfo: SkeletonInfo;
-@group(1) @binding(1) var<storage> skRootIndices: array<i32>;  // Size == SkeletonInfo.rootJointNum
-@group(1) @binding(2) var<storage> jtParentIndices: array<i32>;// Size == SkeletonInfo.jointNum
-@group(1) @binding(3) var<storage> skLayerArray: array<i32>;   // Size == SkeletonInfo.layerArrSize
-@group(1) @binding(4) var<storage, read_write> jointsData: Joints;
+//@group(1) @binding(1) var<storage> skRootIndices: array<i32>;  // Size == SkeletonInfo.rootJointNum
+@group(1) @binding(1) var<storage> jtParentIndices: array<i32>;// Size == SkeletonInfo.jointNum
+@group(1) @binding(2) var<storage> skLayerArray: array<i32>;   // Size == SkeletonInfo.layerArrSize
+@group(1) @binding(3) var<storage, read_write> jointsData: Joints;
 
 
 
@@ -136,26 +139,36 @@ fn translate(t: mat4x4<f32>, x: f32, y: f32, z: f32) -> mat4x4<f32>{
 
 fn flapWings(idx: u32)
 {
-  var speed = 8.0;
+  var speed = 5.0;
+  var cycle = (sin(time.value * speed + f32(idx)) + 1) / 2;  
+  //var cycle = 1.0;
 
   var jointIndex = 8; // Bone.009
   var defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed + f32(idx)), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, -30 * cycle,  0 * cycle, 0);
 
-  jointIndex = 15; // Bone.004
+  jointIndex = 10; // Bone.011
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(0, 25 * sin(time.value * speed + f32(idx)), 0, 0);
+  //jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(30 * cycle, 0  * cycle, -0 * cycle, 0);
+
+   jointIndex = 15; // Bone.004 
+   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
+   jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 30 * cycle, 0 * cycle, 0);
+
+  jointIndex = 18; // Bone.018
+  defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
+//  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(0, 30 * cycle, 0, 0);
 
   jointIndex = 19; // Bone.019
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot - vec4(0, 30 * sin(time.value * speed + f32(idx)), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 30 * cycle,  0 * cycle, 0);
 
   jointIndex = 26; // Bone.026
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0, 30 * sin(time.value * speed + f32(idx)), 0, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, -30 * cycle, 0 * cycle, 0);
 }
 
-fn updateVelocity(v: vec3<f32>, force: vec3<f32>, dt: f32) -> vec3<f32>
+fn updateVelocity(v: vec4<f32>, force: vec4<f32>, dt: f32) -> vec4<f32>
 {
     var res = v;
     res = force* time.value * dt;
@@ -204,7 +217,8 @@ fn noise_gen1(p: vec3<f32>) -> f32
 fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) 
 {
   const deltaTime = 0.01;
-  const kDeparture = 1200;
+  const kDeparture = 600;
+  const ROTATIONTHRESHOLD = 0.1;
 
   var idx = GlobalInvocationID.x;
   //model matrix transformation
@@ -226,27 +240,27 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   m_rotation[3][2] = 0;
 
   var translateVec = vec3<f32>(m_translate[3][0], m_translate[3][1], m_translate[3][2]);
-  var force = vec3<f32>(cos(time.value)+noise_gen1(translateVec),(0.05 * (noise_gen1(translateVec)+ 0.5)) , sin(time.value)+noise_gen1(translateVec));
+  var force = vec4<f32>(cos(time.value)+noise_gen1(translateVec),(0.05 * (noise_gen1(translateVec)+ 0.5)) , sin(time.value)+noise_gen1(translateVec), 0);
 
   var velocity = velocitiesData[idx];
   velocity = updateVelocity(velocity, force, deltaTime);
   velocitiesData[idx] = velocity;
   //=============================================================================//  
-  // Seek
+  //Seek
   // var vDesired = vec3<f32>(0.0, 0.0, 0.0);
-	// var targetPos = vec3<f32>(10.0, 10.0, 0.0);
+	// var targetPos = vec3<f32>(10, 10.0, -5);
   // //position of each butterfly
 	// var instancePos = translateVec;
 	// // TODO: add your code here to compute Vdesired
 	// vDesired = 0.5 * normalize(targetPos - instancePos);
   
 
-  //Departure
+  // //Departure
   var vDesired = vec3<f32>(0.0, 0.0, 0.0);
 	var targetPos = vec3<f32>(10.0, -10.0, 0.0);
 	var instancePos = translateVec;
 
-	// TODO: add your code here to compute Vdesired
+	// // TODO: add your code here to compute Vdesired
 	var e = targetPos - instancePos;
   var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
 	vDesired = kDeparture * noise_gen1(seed) * (- e / (length(e) * length(e)));
@@ -254,28 +268,43 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
 
 
 
-  velocitiesData[idx] = vDesired;
+  //velocitiesData[idx] = vDesired;
   m_translate = translate(m_translate,vDesired.x * deltaTime, vDesired.y * deltaTime, vDesired.z * deltaTime);
    //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
   //m_translate = translate(m_translate,0, 0.0, 0);
+
+
   //x, y, z rotation
-  var rot = vec4<f32>(0, 0, 0, 0);
-  if(cos(time.value) > 0) {
-     rot = vec4<f32>(0, 0, 30 * 0.01, 0);
-  } else {
-    rot = vec4<f32>(0, 0, -30 * 0.01, 0);
+
+  var f = vec2<f32>(forwardData[idx].x, forwardData[idx].z);
+  //f = normalize(f);
+  var v_n = vec2<f32>(vDesired.x, vDesired.z);
+  var theta = acos(dot(v_n,f) / (length(v_n) * length(f)));
+  
+  //m_translate = translate(m_translate,theta * 0.1 , 0, 0);
+  var rot = vec4<f32>(0, theta, 0, 0);
+  if(abs(theta) < ROTATIONTHRESHOLD) {
+      rot = vec4<f32>(0, 0, 0, 0);
   }
+  // if(cos(time.value) > 0) {
+  //    rot = vec4<f32>(0, 0, 30 * 0.01, 0);
+  // } else {
+  //   rot = vec4<f32>(0, 0, -30 * 0.01, 0);
+  // }
   
   var localRotationMatrix = eulerToRotationMatrix(rot);
+
+  forwardData[idx] = localRotationMatrix * forwardData[idx];
   m_rotation = localRotationMatrix * m_rotation;
 
   m = m_translate * m_rotation * m_scale;
   transform[idx] = m;
+  velocitiesData[idx] = vec4<f32>(vDesired.x, vDesired.y,vDesired.z, 0); 
 //======================================================================================//
 
-  if(u32(idx) < arrayLength(&transform))
-  {
+  //{
     // Animation here
+  if(u32(idx) < arrayLength(&transform)) {
     flapWings(idx);
 
     update_skeleton(i32(idx));

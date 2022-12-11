@@ -70,7 +70,7 @@ export default class Application
             const gui = new DAT.GUI();
             gui.width = 300;
             gui.add(controls, 'frame_rate').name("FPS").listen();
-            gui.add(controls, 'instance_num', 1, 10000).step(1).name('Number of Butterflies')
+            gui.add(controls, 'instance_num', 1, 500).step(1).name('Number of Butterflies')
             .onChange(() => {
                 this.onInstanceChanged();
             });
@@ -201,7 +201,7 @@ export default class Application
         });
 
         await this.gltf_butterfly.init(
-            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-done.gltf',
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-final.gltf',
             controls.instance_num,
             instance_name,
             instance_trans);
@@ -295,7 +295,7 @@ export default class Application
         //this.frame += 1; 
 
         //console.log(this.frame);
-       // console.log("delta time", this.time - this.prev_time );
+        //console.log("delta time", this.time - this.prev_time );
         controls.frame_rate = 1 / (this.time - this.prev_time);
         this.prev_time = this.time;
 
