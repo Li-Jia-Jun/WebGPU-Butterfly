@@ -13,6 +13,7 @@ import { mat4 } from 'gl-matrix';
 import * as DAT from 'dat.gui';
 
 const controls = {
+    frame_rate: 0,
     instance_num: 1,
     frequency: 1,
     amplitude: 1,
@@ -51,6 +52,8 @@ export default class Application
     depthTexture: GPUTexture;
     depthTextureView: GPUTextureView;
 
+    //frame: number = -1;
+    prev_time: number = 0;
     time : number;      // the application running time in seconds
 
     canRun : boolean;
@@ -66,7 +69,8 @@ export default class Application
             // GUI
             const gui = new DAT.GUI();
             gui.width = 300;
-            gui.add(controls, 'instance_num', 1, 500).step(1).name('Number of Butterflies')
+            gui.add(controls, 'frame_rate').name("FPS").listen();
+            gui.add(controls, 'instance_num', 1, 10000).step(1).name('Number of Butterflies')
             .onChange(() => {
                 this.onInstanceChanged();
             });
@@ -287,6 +291,14 @@ export default class Application
 
     run = (timestamp : number) =>
     {
+        //this.frame += 1; 
+
+        //console.log(this.frame);
+       // console.log("delta time", this.time - this.prev_time );
+        controls.frame_rate = 1 / (this.time - this.prev_time);
+        this.prev_time = this.time;
+
+
         // Update data in each frame
         this.updateFrameData(timestamp);
 
