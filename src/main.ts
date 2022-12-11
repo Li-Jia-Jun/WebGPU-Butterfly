@@ -70,7 +70,7 @@ export default class Application
             const gui = new DAT.GUI();
             gui.width = 300;
             gui.add(controls, 'frame_rate').name("FPS").listen();
-            gui.add(controls, 'instance_num', 1, 10000).step(1).name('Number of Butterflies')
+            gui.add(controls, 'instance_num', 1, 500).step(1).name('Number of Butterflies')
             .onChange(() => {
                 this.onInstanceChanged();
             });

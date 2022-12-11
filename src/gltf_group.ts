@@ -123,6 +123,7 @@ export default class GLTFGroup
 
     transforms : mat4[];
     velocity: vec4[];           // velocity vectors to pass
+    forward: vec4[];
     names : string[];
     instanceCount;
 
@@ -161,6 +162,7 @@ export default class GLTFGroup
         }
 
         this.initVelocity();
+        this.initForwardVectors();
         this.#printAnything();
     }
 
@@ -184,6 +186,7 @@ export default class GLTFGroup
         }
 
         this.initVelocity();
+        this.initForwardVectors();
     }
 
     initVelocity() {
@@ -191,6 +194,14 @@ export default class GLTFGroup
         for(let i = 0; i < this.instanceCount; i++) {
             var v = vec4.fromValues(0, 0, 0, 0);
             this.velocity.push(v);
+        }
+    }
+
+    initForwardVectors(){
+        this.forward = new Array();
+        for (let i = 0; i < this.instanceCount; i++) {
+            var f = vec4.fromValues(0, 0, -1, 0);
+            this.forward.push(f);
         }
     }
 
