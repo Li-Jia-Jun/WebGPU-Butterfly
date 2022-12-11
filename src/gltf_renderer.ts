@@ -112,6 +112,8 @@ export default class GltfRenderer
     //time
     timeBuffer: GPUBuffer;
     velocityBuffer: GPUBuffer;
+    forwardBuffer: GPUBuffer;
+
     // Web stuff
     canvas : HTMLCanvasElement;
 
@@ -614,9 +616,14 @@ export default class GltfRenderer
                 buffer: {type: 'storage'},
             },
             {
-                binding: 3,
+                binding: 3, // velocity
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: {type: 'storage'},
+            },
+            {
+                binding: 4,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: { type: 'storage' },
             }
         ],
         });    
@@ -632,8 +639,13 @@ export default class GltfRenderer
             size: 4 * Float32Array.BYTES_PER_ELEMENT * this.gltf_group.instanceCount,
             usage:GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
         })
-
         this.setVelocityBuffer();
+        this.forwardBuffer = this.device.createBuffer
+        ({
+            size: 4 * Float32Array.BYTES_PER_ELEMENT * this.gltf_group.instanceCount,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        })
+        this.setForwardBuffer();
         
         this.computeBindGroup = this.device.createBindGroup
         ({
@@ -655,7 +667,12 @@ export default class GltfRenderer
             {
                 binding: 3, //instance velocity 
                 resource: { buffer: this.velocityBuffer} 
-            }
+            },
+            {
+                binding: 4, //instance foward
+                resource: { buffer: this.forwardBuffer}
+            },
+            
             ],
         });
     }
@@ -677,11 +694,11 @@ export default class GltfRenderer
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
         });
 
-        const rootIdxBufferSize = Int32Array.BYTES_PER_ELEMENT * this.gltf_group.skRootIndices.length;
-        this.rootIdxBuffer = this.device.createBuffer({
-            size: rootIdxBufferSize,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-        });
+        // const rootIdxBufferSize = Int32Array.BYTES_PER_ELEMENT * this.gltf_group.skRootIndices.length;
+        // this.rootIdxBuffer = this.device.createBuffer({
+        //     size: rootIdxBufferSize,
+        //     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        // });
 
         const parentIdxBufferSize = Int32Array.BYTES_PER_ELEMENT * this.gltf_group.jtParentIndices.length;
         this.parentIdxBuffer = this.device.createBuffer({
@@ -697,7 +714,7 @@ export default class GltfRenderer
 
         var skeletonInfoData1 = new Float32Array([          // JointNum, rootJointNum, layerSize, pedding
             this.gltf_group.skeletons[0].joints.length, 
-            this.gltf_group.skRootIndices.length,
+            0,
             this.gltf_group.jtLayerArray.length, 
             -1,]).buffer;
 
@@ -706,8 +723,8 @@ export default class GltfRenderer
             this.device.queue.writeBuffer(this.compSkeletonInfoBuffer, 4 * Float32Array.BYTES_PER_ELEMENT, skeletonInfoData2);
             this.loadJointsIntoGPUBuffer(0, this.compSkeletonInfoBuffer, 20 * Float32Array.BYTES_PER_ELEMENT); // default pose, 20 = 4+16
 
-            var rootIdxData =  new Int32Array (this.gltf_group.skRootIndices).buffer;
-            this.device.queue.writeBuffer(this.rootIdxBuffer, 0, rootIdxData);
+            // var rootIdxData =  new Int32Array (this.gltf_group.skRootIndices).buffer;
+            // this.device.queue.writeBuffer(this.rootIdxBuffer, 0, rootIdxData);
 
             var parentIdxData = new Int32Array(this.gltf_group.jtParentIndices).buffer;
             this.device.queue.writeBuffer(this.parentIdxBuffer, 0, parentIdxData);
@@ -725,23 +742,23 @@ export default class GltfRenderer
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: {type: 'read-only-storage'},
             },
+            // {
+            //     binding: 1, // skeleton rootIndices
+            //     visibility: GPUShaderStage.COMPUTE,
+            //     buffer: {type: 'read-only-storage'},
+            // },
             {
-                binding: 1, // skeleton rootIndices
+                binding: 1, // joint parentIndices
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: {type: 'read-only-storage'},
             },
             {
-                binding: 2, // joint parentIndices
+                binding: 2, // layer array
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: {type: 'read-only-storage'},
             },
             {
-                binding: 3, // layer array
-                visibility: GPUShaderStage.COMPUTE,
-                buffer: {type: 'read-only-storage'},
-            },
-            {
-                binding: 4, // joints
+                binding: 3, // joints
                 visibility: GPUShaderStage.COMPUTE,
                 buffer:{type: 'storage'},
             }
@@ -769,20 +786,17 @@ export default class GltfRenderer
             [{
                 binding: 0, // skeleton info
                 resource: { buffer: this.compSkeletonInfoBuffer },
-            },{
-                binding: 1, // skeleton root indices
-                resource: { buffer: this.rootIdxBuffer },
             },
             {
-                binding: 2, // joint parent indices
+                binding: 1, // joint parent indices
                 resource: { buffer: this.parentIdxBuffer },
             },
             {
-                binding: 3, // joint parent indices
+                binding: 2, // joint parent indices
                 resource: { buffer: this.layerArrayBuffer },
             },
             {
-                binding: 4, // TRS Children
+                binding: 3, // TRS Children
                 resource: { buffer: this.jointsTRSBuffer },
             }
             ],
@@ -1277,6 +1291,16 @@ export default class GltfRenderer
             arr.set(this.gltf_group.velocity[i]);
         }
         this.device.queue.writeBuffer(this.velocityBuffer, 0, velocityArrayBuffer);
+    }
+
+    setForwardBuffer() {
+        var forwardArrayBuffer = new ArrayBuffer(4 * this.gltf_group.instanceCount * Float32Array.BYTES_PER_ELEMENT);
+        for (let i = 0; i < this.gltf_group.instanceCount; i++) {
+            let st = i * 4 * Float32Array.BYTES_PER_ELEMENT;
+            let arr = new Float32Array(forwardArrayBuffer, st, 4);
+            arr.set(this.gltf_group.forward[i]);
+        }
+        this.device.queue.writeBuffer(this.forwardBuffer, 0, forwardArrayBuffer);
     }
 }
 
