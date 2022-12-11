@@ -1,0 +1,364 @@
+{
+    "asset" : {
+        "generator" : "Khronos glTF Blender I/O v1.8.19",
+        "version" : "2.0"
+    },
+    "scene" : 0,
+    "scenes" : [
+        {
+            "name" : "Scene",
+            "nodes" : [
+                9
+            ]
+        }
+    ],
+    "nodes" : [
+        {
+            "name" : "UB",
+            "rotation" : [
+                -0.7237945795059204,
+                0,
+                0,
+                0.6900155544281006
+            ],
+            "scale" : [
+                1,
+                1,
+                0.9999999403953552
+            ],
+            "translation" : [
+                0,
+                -0.031348273158073425,
+                0.29652562737464905
+            ]
+        },
+        {
+            "name" : "LB",
+            "rotation" : [
+                -0.003547224448993802,
+                -0.7070978879928589,
+                -0.7070978879928589,
+                0.0035472246818244457
+            ],
+            "scale" : [
+                1,
+                0.9999999403953552,
+                1
+            ],
+            "translation" : [
+                0,
+                -0.031348273158073425,
+                0.29652562737464905
+            ]
+        },
+        {
+            "name" : "RR",
+            "rotation" : [
+                -0.2256520390510559,
+                -0.6701350212097168,
+                -0.6701352596282959,
+                0.22565218806266785
+            ],
+            "scale" : [
+                1.0000005960464478,
+                0.9999999403953552,
+                1
+            ],
+            "translation" : [
+                0,
+                -0.031348273158073425,
+                0.29652562737464905
+            ]
+        },
+        {
+            "name" : "LR",
+            "rotation" : [
+                -0.21903134882450104,
+                0.6723282337188721,
+                0.6723282933235168,
+                0.21903130412101746
+            ],
+            "scale" : [
+                0.9999998211860657,
+                1.0000001192092896,
+                1
+            ],
+            "translation" : [
+                0,
+                -0.031348273158073425,
+                0.29652562737464905
+            ]
+        },
+        {
+            "name" : "RF",
+            "rotation" : [
+                -0.6508775949478149,
+                -0.2763301432132721,
+                -0.2763301730155945,
+                0.6508775949478149
+            ],
+            "scale" : [
+                1,
+                0.9999999403953552,
+                1
+            ],
+            "translation" : [
+                1.072031885485103e-08,
+                -0.031348273158073425,
+                0.29652562737464905
+            ]
+        },
+        {
+            "name" : "LF",
+            "rotation" : [
+                -0.6491091847419739,
+                0.28045904636383057,
+                0.28045907616615295,
+                0.6491091847419739
+            ],
+            "scale" : [
+                1,
+                0.9999999403953552,
+                1
+            ],
+            "translation" : [
+                -6.381171147040732e-10,
+                -0.031348273158073425,
+                0.29652559757232666
+            ]
+        },
+        {
+            "name" : "RM",
+            "rotation" : [
+                -0.5195117592811584,
+                -0.4796954095363617,
+                -0.4796954095363617,
+                0.5195116400718689
+            ],
+            "translation" : [
+                -1.856739428873766e-09,
+                -0.031348273158073425,
+                0.29652562737464905
+            ]
+        },
+        {
+            "name" : "LM",
+            "rotation" : [
+                -0.510880172252655,
+                0.4888778030872345,
+                0.4888778030872345,
+                0.5108801126480103
+            ],
+            "translation" : [
+                0,
+                -0.031348273158073425,
+                0.29652562737464905
+            ]
+        },
+        {
+            "mesh" : 0,
+            "name" : "wing_02_lambert1_0",
+            "skin" : 0
+        },
+        {
+            "children" : [
+                8,
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7
+            ],
+            "name" : "Armature"
+        }
+    ],
+    "materials" : [
+        {
+            "doubleSided" : true,
+            "name" : "lambert1",
+            "normalTexture" : {
+                "index" : 0
+            },
+            "pbrMetallicRoughness" : {
+                "baseColorTexture" : {
+                    "index" : 1
+                },
+                "metallicRoughnessTexture" : {
+                    "index" : 2
+                },
+                "roughnessFactor" : 0.6000000238418579
+            }
+        }
+    ],
+    "meshes" : [
+        {
+            "name" : "wing_02_lambert1_0",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 0,
+                        "NORMAL" : 1,
+                        "TEXCOORD_0" : 2,
+                        "JOINTS_0" : 3,
+                        "WEIGHTS_0" : 4
+                    },
+                    "indices" : 5,
+                    "material" : 0
+                }
+            ]
+        }
+    ],
+    "textures" : [
+        {
+            "sampler" : 0,
+            "source" : 0
+        },
+        {
+            "sampler" : 0,
+            "source" : 1
+        },
+        {
+            "sampler" : 0,
+            "source" : 2
+        }
+    ],
+    "images" : [
+        {
+            "mimeType" : "image/png",
+            "name" : "lambert1_normal",
+            "uri" : "lambert1_normal.png"
+        },
+        {
+            "mimeType" : "image/png",
+            "name" : "lambert1_baseColor",
+            "uri" : "lambert1_baseColor.png"
+        },
+        {
+            "mimeType" : "image/png",
+            "name" : "lambert1_metallicRoughness",
+            "uri" : "lambert1_metallicRoughness.png"
+        }
+    ],
+    "skins" : [
+        {
+            "inverseBindMatrices" : 6,
+            "joints" : [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7
+            ],
+            "name" : "Armature"
+        }
+    ],
+    "accessors" : [
+        {
+            "bufferView" : 0,
+            "componentType" : 5126,
+            "count" : 3244,
+            "max" : [
+                2.4295856952667236,
+                0.18140293657779694,
+                2.069549798965454
+            ],
+            "min" : [
+                -2.384917974472046,
+                -0.501998245716095,
+                -1.6569976806640625
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 1,
+            "componentType" : 5126,
+            "count" : 3244,
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 2,
+            "componentType" : 5126,
+            "count" : 3244,
+            "type" : "VEC2"
+        },
+        {
+            "bufferView" : 3,
+            "componentType" : 5121,
+            "count" : 3244,
+            "type" : "VEC4"
+        },
+        {
+            "bufferView" : 4,
+            "componentType" : 5126,
+            "count" : 3244,
+            "type" : "VEC4"
+        },
+        {
+            "bufferView" : 5,
+            "componentType" : 5123,
+            "count" : 7272,
+            "type" : "SCALAR"
+        },
+        {
+            "bufferView" : 6,
+            "componentType" : 5126,
+            "count" : 8,
+            "type" : "MAT4"
+        }
+    ],
+    "bufferViews" : [
+        {
+            "buffer" : 0,
+            "byteLength" : 38928,
+            "byteOffset" : 0
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 38928,
+            "byteOffset" : 38928
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 25952,
+            "byteOffset" : 77856
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 12976,
+            "byteOffset" : 103808
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 51904,
+            "byteOffset" : 116784
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 14544,
+            "byteOffset" : 168688
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 512,
+            "byteOffset" : 183232
+        }
+    ],
+    "samplers" : [
+        {
+            "magFilter" : 9729,
+            "minFilter" : 9987
+        }
+    ],
+    "buffers" : [
+        {
+            "byteLength" : 183744,
+            "uri" : "butterfly-new-skel.bin"
+        }
+    ]
+}
