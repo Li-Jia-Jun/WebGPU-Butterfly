@@ -295,7 +295,7 @@ export default class Application
         //this.frame += 1; 
 
         //console.log(this.frame);
-       // console.log("delta time", this.time - this.prev_time );
+        //console.log("delta time", this.time - this.prev_time );
         controls.frame_rate = 1 / (this.time - this.prev_time);
         this.prev_time = this.time;
 

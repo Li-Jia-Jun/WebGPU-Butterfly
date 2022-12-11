@@ -1,0 +1,11 @@
+Model Information:
+* title:	Low Poly Landscape
+* source:	https://sketchfab.com/3d-models/low-poly-landscape-ad2c747b85f34adbaccc8f711d6289ab
+* author:	Ghozali.Ghozalu (https://sketchfab.com/Ghozali.Ghozalu)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Low Poly Landscape" (https://sketchfab.com/3d-models/low-poly-landscape-ad2c747b85f34adbaccc8f711d6289ab) by Ghozali.Ghozalu (https://sketchfab.com/Ghozali.Ghozalu) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
