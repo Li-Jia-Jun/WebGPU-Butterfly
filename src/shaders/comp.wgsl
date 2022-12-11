@@ -139,17 +139,16 @@ fn translate(t: mat4x4<f32>, x: f32, y: f32, z: f32) -> mat4x4<f32>{
 
 fn flapWings(idx: u32)
 {
-  var speed = 5.0;
-  var cycle = (sin(time.value * speed + f32(idx)) + 1) / 2;  
-  //var cycle = 1.0;
+  var speed = 5.0 + noise_gen1(f32(idx));
+  var cycle = (sin(time.value * speed + f32(idx)) + 0.6) / 1.6 / (noise_gen1(f32(idx)) * 0.2 + 0.8);  
 
   var jointIndex = 4; // RF
-   var defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-   jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  70 * cycle, 0);
+  var defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  70 * cycle, 0);
 
   jointIndex = 2; // RR
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  55 * cycle, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  60 * cycle, 0);
 
   jointIndex = 6; // RM
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
@@ -162,7 +161,7 @@ fn flapWings(idx: u32)
 
   jointIndex = 3; // LR
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
-  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  -55 * cycle, 0);
+  jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  -60 * cycle, 0);
   
   jointIndex = 7; // LM
   defaultRot = skeletonInfo.defaultPose[jointIndex].rotate;
@@ -177,9 +176,14 @@ fn updateVelocity(v: vec4<f32>, force: vec4<f32>, dt: f32) -> vec4<f32>
     return res;
 }
 
-fn noise_gen1(p: vec3<f32>) -> f32 
+fn noise_gen1v(p: vec3<f32>) -> f32 
  { 
     return fract(sin((dot(p, vec3(127.1, 311.7, 191.999)))) * 43758.5453); 
+ } 
+
+fn noise_gen1(x: f32) -> f32 
+ { 
+    return fract(sin(x * 127.1) * 43758.5453);
  } 
 
 
@@ -242,7 +246,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   m_rotation[3][2] = 0;
 
   var translateVec = vec3<f32>(m_translate[3][0], m_translate[3][1], m_translate[3][2]);
-  var force = vec4<f32>(cos(time.value)+noise_gen1(translateVec),(0.05 * (noise_gen1(translateVec)+ 0.5)) , sin(time.value)+noise_gen1(translateVec), 0);
+  var force = vec4<f32>(cos(time.value)+noise_gen1v(translateVec),(0.05 * (noise_gen1v(translateVec)+ 0.5)) , sin(time.value)+noise_gen1v(translateVec), 0);
 
   var velocity = velocitiesData[idx];
   velocity = updateVelocity(velocity, force, deltaTime);
@@ -265,7 +269,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
 	// // TODO: add your code here to compute Vdesired
 	var e = targetPos - instancePos;
   var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
-	vDesired = kDeparture * noise_gen1(seed) * (- e / (length(e) * length(e)));
+	vDesired = kDeparture * noise_gen1v(seed) * (- e / (length(e) * length(e)));
 
 
 
