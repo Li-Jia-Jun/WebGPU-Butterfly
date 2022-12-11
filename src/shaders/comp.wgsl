@@ -231,8 +231,8 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   velocitiesData[idx] = velocity;
 
   
-   m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
-  //m_translate = translate(m_translate,0, 0.0, 0);
+   //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
+  m_translate = translate(m_translate,0, 0.0, 0);
   //x, y, z rotation
   var rot = vec4<f32>(0, 0, 0, 0);
   if(cos(time.value) > 0) {

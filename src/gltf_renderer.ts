@@ -1167,7 +1167,7 @@ export default class GltfRenderer
             this.computepassEncoder.setPipeline(this.computePipeline);
             this.computepassEncoder.setBindGroup(0, this.computeBindGroup);
             this.computepassEncoder.setBindGroup(1, this.skeletonBindGroup);
-            this.computepassEncoder.dispatchWorkgroups(1);
+            this.computepassEncoder.dispatchWorkgroups(Math.ceil(this.gltf_group.instanceCount / 64));
             this.computepassEncoder.end();
         }
 
@@ -1339,7 +1339,7 @@ class GLTFUtil
     {
         const norm = accessor.normalized ? 'norm' : 'int';
         const count = GLTFUtil.componentCountForType(accessor.type);
-        const x = count > 1 ? `x${count}` : '';
+        const x = count > 1 ? `x${count}` :  '';
         switch (accessor.componentType) 
         {
             case GLTFUtil.GL_BYTE: return `s${norm}8${x}`;

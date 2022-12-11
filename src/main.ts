@@ -66,7 +66,7 @@ export default class Application
             // GUI
             const gui = new DAT.GUI();
             gui.width = 300;
-            gui.add(controls, 'instance_num', 1, 100).step(1).name('Number of Butterflies')
+            gui.add(controls, 'instance_num', 1, 500).step(1).name('Number of Butterflies')
             .onChange(() => {
                 this.onInstanceChanged();
             });
@@ -93,6 +93,17 @@ export default class Application
         }
     }
 
+    getButterflyPos(num: number, idx: number)
+    {
+        let cubeVal = Math.ceil(Math.cbrt(num)) + 0.5;
+        let invCubeVal = 1.0 / cubeVal;
+        let x = idx % (cubeVal - 1);
+        let y = (idx / (cubeVal - 1) )% (cubeVal - 1);
+        let z = idx / ((cubeVal-1) * (cubeVal - 1));
+        let newTrans = [x + Math.random() * invCubeVal, y + Math.random() * invCubeVal, z + Math.random() * invCubeVal]; 
+        return newTrans;
+    }
+
     onInstanceChanged()
     {
         if(this.gltf_butterfly == undefined || this.renderer_butterfly == undefined)
@@ -108,22 +119,16 @@ export default class Application
             let newName = ("b"+(i+1).toString());
             instance_name.push(newName);
             let even = (i % 2 == 0);
-            let newTrans = [];
-            if (even)
-            {
-                newTrans = [s,0,0,0,  0,s,0,0,  0,0,s,0,  0 - 4 * i,0,0,1];
-            }
-            else
-            {
-                newTrans = [s,0,0,0,  0,s,0,0,  0,0,s,0,  4 * i,0,0,1];
-            }
-            instance_trans.push(newTrans);
+            let newTrans = this.getButterflyPos(controls.instance_num, i);
+            let newMat =  [s,0,0,0,  0,s,0,0,  0,0,s,0, s * 5 * newTrans[0], s *  5  * newTrans[1],s * 5 * newTrans[2],1]
+            instance_trans.push(newMat);
         }
 
         this.gltf_butterfly.refreshInstance(controls.instance_num, instance_name, instance_trans);
         this.renderer_butterfly.refreshInstance();
     }
 
+    
     async initScene()
     {
         const t = [0, -10, 0];
