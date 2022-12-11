@@ -1,0 +1,11 @@
+Model Information:
+* title:	Low Poly Nature
+* source:	https://sketchfab.com/3d-models/low-poly-nature-493b488007f14e3b98502ccc60f78582
+* author:	EdwinRC (https://sketchfab.com/Edwin3D)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Low Poly Nature" (https://sketchfab.com/3d-models/low-poly-nature-493b488007f14e3b98502ccc60f78582) by EdwinRC (https://sketchfab.com/Edwin3D) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
