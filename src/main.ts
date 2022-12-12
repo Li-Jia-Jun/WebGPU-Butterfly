@@ -15,17 +15,6 @@ import { mat4, vec3, vec4 } from 'gl-matrix';
 import * as DAT from 'dat.gui';
 
 
-const controls = {
-    frame_rate: 0,
-    instance_num: 1,
-    x: 1,
-    y: 2,
-    z: 3,
-    amplitude: 1,
-    air_density: 1,
-    phase_angle: 0,
-};
-
 export default class Application 
 {
     renderer_butterfly : GltfRenderer;
@@ -72,6 +61,10 @@ export default class Application
         amplitude: 1,
         air_density: 1,
         phase_angle: 0,
+        x: 1,
+        y: 2,
+        z: 3,
+        group_behavior: 'wander', 
     };
 
     enableProcedural()
@@ -107,15 +100,14 @@ export default class Application
             .onChange(() => {
                 this.onInstanceChanged();
             });
-            var forceGUI = gui.addFolder('Group Behavior');
-            var targetPosGUI = forceGUI.addFolder("Target Position");
-            targetPosGUI.add(controls, 'x').onChange(() => {this.onPositionChange();});
-            targetPosGUI.add(controls, 'y').onChange(() => {this.onPositionChange();});
-            targetPosGUI.add(controls, 'z').onChange(() => {this.onPositionChange();});
-         //   forceGUI.add(controls,'target_pos').name('Target Pos').listen();
-            forceGUI.add(controls,'amplitude', 0, 4).step(1);
-            forceGUI.add(controls,'air_density',0, 2 ).step(0.1);
-            forceGUI.add(controls,'phase_angle',0, 360).step(1);
+            gui.add(this.controls, 'Enable Procedural Color');
+            var groupGUI = gui.addFolder('Group Behavior');
+            var targetPosGUI = groupGUI.addFolder("Target Position");
+            targetPosGUI.add(this.controls, 'x').onChange(() => {this.onPositionChange();});
+            targetPosGUI.add(this.controls, 'y').onChange(() => {this.onPositionChange();});
+            targetPosGUI.add(this.controls, 'z').onChange(() => {this.onPositionChange();});
+
+            groupGUI.add(this.controls, 'group_behavior', { wander: 'wander', arrival: 'arrival', departure: 'departure' }).name('Target Position').onChange(() => { this.onBehaviorChange(); });;
 
             // HTML stuff
             this.canvas = document.getElementById('gfx') as HTMLCanvasElement;
@@ -174,10 +166,23 @@ export default class Application
         if (this.gltf_butterfly == undefined || this.renderer_butterfly == undefined) {
             return;
         }
-        this.gltf_butterfly.targetPosition = vec4.fromValues(controls.x, controls.y, controls.z, 0);
-       // console.log(this.gltf_butterfly.targetPosition);
+        this.gltf_butterfly.targetPosition = vec4.fromValues(this.controls.x, this.controls.y, this.controls.z, 0);
     }
     
+    onBehaviorChange() {
+        if (this.gltf_butterfly == undefined || this.renderer_butterfly == undefined) {
+            return;
+        }
+        switch (this.controls.group_behavior) {
+            case 'wander':
+                this.gltf_butterfly.behavior = vec4.fromValues(1,0,0,0);
+            case 'arrival':
+                this.gltf_butterfly.behavior = vec4.fromValues(0,1,0,0);
+            case 'departure':
+                this.gltf_butterfly.behavior = vec4.fromValues(0,0,1,0);
+        }
+       
+    }
     async initScene()
     {
         // const t = [0, -10, 0];
@@ -187,8 +192,8 @@ export default class Application
 
         this.gltf_scene = new GLTFGroup();
         await this.gltf_scene.init(
-            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
-            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
+            //'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
+             'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene2.gltf',        
             1,
             ['Scene'],
@@ -326,6 +331,7 @@ export default class Application
         // Update camera buffer for each renderer
         this.renderer_butterfly.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, this.time); 
         this.renderer_butterfly.updateTargetPosBuffer();   
+        this.renderer_butterfly.updateBehaviorBuffer(); 
         this.renderer_scene.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, this.time);   
     
     }

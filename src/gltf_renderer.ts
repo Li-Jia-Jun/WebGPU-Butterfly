@@ -115,6 +115,7 @@ export default class GltfRenderer
     velocityBuffer: GPUBuffer;
     forwardBuffer: GPUBuffer;
     targetPosBuffer: GPUBuffer;
+    behaviorBuffer: GPUBuffer;
 
     // Web stuff
     canvas : HTMLCanvasElement;
@@ -643,6 +644,11 @@ export default class GltfRenderer
                 binding: 5,
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: { type: 'uniform' },
+            }, 
+            {
+                binding: 6,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: { type: 'uniform' },
             }
         ],
         });    
@@ -671,6 +677,12 @@ export default class GltfRenderer
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         })
         this.setTargetPosBuffer();
+        this.behaviorBuffer = this.device.createBuffer
+            ({
+                size: 4 * Float32Array.BYTES_PER_ELEMENT,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+            })
+        this.setBehaviorBuffer();
         this.computeBindGroup = this.device.createBindGroup
         ({
             label: `Compute BindGroup`,
@@ -700,6 +712,11 @@ export default class GltfRenderer
                 binding: 5, //flock target position
                 resource: { buffer: this.targetPosBuffer }
             },
+            {
+                binding: 6, // behavior
+                resource: { buffer: this.behaviorBuffer }
+            },
+            
             
             ],
         });
@@ -1314,8 +1331,15 @@ export default class GltfRenderer
         let array = new Float32Array(arrayBuffer, 0, 4);
         var p = this.gltf_group.targetPosition;
         array.set(p);
-        console.log(p);
         this.device.queue.writeBuffer(this.targetPosBuffer, 0, arrayBuffer);
+    }
+
+    updateBehaviorBuffer() {
+        let arrayBuffer = new ArrayBuffer(4 * Float32Array.BYTES_PER_ELEMENT);
+        let array = new Float32Array(arrayBuffer, 0, 4);
+        var p = this.gltf_group.behavior;
+        array.set(p);
+        this.device.queue.writeBuffer(this.behaviorBuffer, 0, arrayBuffer);
     }
     setInstanceBuffer()
     {
@@ -1354,9 +1378,17 @@ export default class GltfRenderer
         let arrayBuffer = new ArrayBuffer(4 * Float32Array.BYTES_PER_ELEMENT);
         let array = new Float32Array(arrayBuffer, 0, 4);
         var p = this.gltf_group.targetPosition;
-        console.log("nmsl: " + p);
         array.set(p);
         this.device.queue.writeBuffer(this.targetPosBuffer, 0, arrayBuffer);
+    }
+
+    setBehaviorBuffer() {
+        let arrayBuffer = new ArrayBuffer(4 * Float32Array.BYTES_PER_ELEMENT);
+        let array = new Float32Array(arrayBuffer, 0, 4);
+        var p = this.gltf_group.behavior;
+        console.log("nmsl: " + p);
+        array.set(p);
+        this.device.queue.writeBuffer(this.behaviorBuffer, 0, arrayBuffer);
     }
 }
 

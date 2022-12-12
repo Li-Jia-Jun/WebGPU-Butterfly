@@ -45,8 +45,8 @@ struct SkeletonInfo
 @group(0) @binding(3) var<storage, read_write> velocitiesData: array<vec4<f32>>;
 @group(0) @binding(4) var<storage, read_write> forwardData: array<vec4<f32>>;
 @group(0) @binding(5) var<uniform> targetPos_4: vec4<f32>;
-
-
+//0: wander, 1: arrival, 2: departure
+@group(0) @binding(6) var<uniform> behavior: vec4<f32>;
 
 //skeleton information
 @group(1) @binding(0) var<storage> skeletonInfo: SkeletonInfo;
@@ -171,9 +171,10 @@ fn flapWings(idx: u32)
 
 fn bump(idx: u32, translation : mat4x4<f32>) -> mat4x4<f32>
 {
-    var speed = 5.0 + noise_gen1(f32(idx));
-    var cycle = (cos(time.value * speed + f32(idx)) + 0.6) / 1.6 / (noise_gen1(f32(idx)) * 0.2 + 0.8);  
-
+    //var speed = 5.0 + noise_gen1(f32(idx));
+    //var cycle = (cos(time.value * speed + f32(idx)) + 0.6) / 1.6 / (noise_gen1(f32(idx)) * 0.2 + 0.8);  
+    var speed = 5.0 ;
+    var cycle = cos(time.value * speed + f32(idx));
     var t = translation;
     t[3][1] = t[3][1] + 0.1 * sin(cycle);
 
@@ -243,10 +244,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
 
 
-  if(u32(idx) >= arrayLength(&transform))
-  {
-      return;
-  }
+  
 
   
   //model matrix transformation
@@ -275,27 +273,32 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   var velocity = velocitiesData[idx];
   velocity = updateVelocity(velocity, force, deltaTime);
   velocitiesData[idx] = velocity;
-  //=============================================================================//  
+  //================Behavior==============================//  
 
-  //Seek
   var vDesired = vec3<f32>(0.0, 0.0, 0.0);
-	var targetPos = vec3<f32>(targetPos_4.x,targetPos_4.y,targetPos_4.z);
+  var targetPos = vec3<f32>(targetPos_4.x,targetPos_4.y,targetPos_4.z);
   var leaderTranslationMatrix = getTranslationMatrix(transform[0]);
   var leaderPos = vec3<f32>(leaderTranslationMatrix[3][0], leaderTranslationMatrix[3][1], leaderTranslationMatrix[3][2]);
+  //Arrival
+  if(behavior[1] == 1){
+      targetPos = vec3<f32>(targetPos_4.x,targetPos_4.y,targetPos_4.z);
+  }
+  
+	
 
   // Wander
-  // var targetPos = vec3<f32>(1000 * (noise_gen1(f32(idx)) - 0.5) , 100 * noise_gen1(f32(idx)+3.14), 1000 *(noise_gen1(f32(idx) + 6.28) - 0.5));
-  // var dist2Tar = distance(targetPos, translateVec);
-  // if (dist2Tar < 10)
-  // {
-  //     targetPos = vec3<f32>(1000 * noise_gen1(f32(idx) + dist2Tar),1000 * noise_gen1(f32(idx) + dist2Tar +3.14), 1000 * noise_gen1(f32(idx) + dist2Tar + 6.28));
-  // }
+  if(behavior[0] == 1) {
+      targetPos = vec3<f32>(1000 * (noise_gen1(f32(idx)) - 0.5) , 100 * noise_gen1(f32(idx)+3.14), 1000 *(noise_gen1(f32(idx) + 6.28) - 0.5));
+      var dist2Tar = distance(targetPos, translateVec);
+      if (dist2Tar < 10)
+      {
+          targetPos = vec3<f32>(1000 * noise_gen1(f32(idx) + dist2Tar),1000 * noise_gen1(f32(idx) + dist2Tar +3.14), 1000 * noise_gen1(f32(idx) + dist2Tar + 6.28));
+      }
+  }
 
-
-  
   var direction = normalize(targetPos - leaderPos);
   
-	// TODO: add your code here to compute Vdesired
+	// apply velocity to transformation
 	vDesired = kSeek * direction;
 
   if(length(targetPos - leaderPos) < 1) {
@@ -307,10 +310,6 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
 	// var targetPos = vec3<f32>(10.0, -10.0, 0.0);
 	// var instancePos = translateVec;
 
-
-
-
-
   //position of each butterfly
 	var instancePos = translateVec;
 	// // // TODO: add your code here to compute Vdesired
@@ -318,12 +317,14 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   // var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
 	// vDesired = kDeparture * noise_gen1v(seed) * (- e / (length(e) * length(e)));
 
-
+  
   m_translate = translate(m_translate,vDesired.x * deltaTime, vDesired.y * deltaTime, vDesired.z * deltaTime);
   //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
   //m_translate = translate(m_translate,0, 0.0, 0);
-
-  //m_translate = bump(u32(idx), m_translate);
+  //if(u32(idx) < arrayLength(&transform)) {
+  m_translate = bump(u32(idx), m_translate);
+  //}
+  
 
   //x, y, z rotation
   var f = vec2<f32>(forwardData[idx].x, forwardData[idx].z);
@@ -352,10 +353,13 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   transform[idx] = m;
   velocitiesData[idx] = vec4<f32>(vDesired.x, vDesired.y,vDesired.z, 0); 
 //======================================================================================//
-
-    // Animation here
-    flapWings(idx);
-    update_skeleton(i32(idx));
+  if(u32(idx) < arrayLength(&transform))
+  {
+      // Animation here
+      flapWings(idx);
+      update_skeleton(i32(idx));
+  }
+    
 }
 
 
