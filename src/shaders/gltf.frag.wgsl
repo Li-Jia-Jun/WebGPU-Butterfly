@@ -116,7 +116,7 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
         discard;
     }   
 
-    if (materialInfo.propertyInfo[3] == 1.0)
+    if (materialInfo.textureInfo[3] == 1.0)
     {
         if(u32(input.instance % 3) == 0)
         {
