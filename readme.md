@@ -7,9 +7,10 @@ Butterfly Simulation with WebGPU
 * [Shineng Tang](https://www.linkedin.com/in/shineng-t-224192195/)
 
 ## **Overview**
-Our project aims to create a simulation of butterflies and control their behaviors using WebGPU. We created a hierarchical rigged skeleton for the butterfy, animated the butterflies by using the bones, and used instancing to increase the performance so that it can run in realtime.
+Our project aims to create a simulation of butterflies and control their behaviors using WebGPU. We created a hierarchical rigged skeleton for the butterfy, animated the butterflies by using the bones, and used instancing to increase the performance so that it can run in realtime.   
+### [**Demo Video**](https://www.youtube.com/watch?v=oaC-IeKjh9U)   
 ![o1](img/overview1.png)
-![o2](img/overview2.png)    
+![o2](img/overview2.png)   
 
 ## Table of Contents  
 * [Presentations](#presentation)
