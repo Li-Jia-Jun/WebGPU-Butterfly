@@ -7,11 +7,14 @@ Realistic Butterfly Flight and Behavior Simulation with WebGPU
 * [Shineng Tang](https://www.linkedin.com/in/shineng-t-224192195/)
 
 ## **Overview**
-Our project aims to create a simulation of butterflies and control their behaviors using WebGPU. We created a hierarchical rigged skeleton for the butterfy, animated the butterflies by using the bones, and used instancing to increase the performance so that it can run in realtime.    
+Our project aims to create a simulation of butterflies and control their behaviors using WebGPU. We created a hierarchical rigged skeleton for the butterfy, animated the butterflies by using the bones, and used instancing to increase the performance so that it can run in realtime.
+![o1](img/overview1.png)
+![o2](img/overview2.png)    
 
 ## Table of Contents  
 * [Presentations](#presentation)
 * [Features](#features) 
+* [Future Improvements](#future)
 * [Reference](#reference)
 
 ## <a name="presentation">Presentations</a>
@@ -52,6 +55,14 @@ Our project aims to create a simulation of butterflies and control their behavio
   -  Departure: all the butterflies will go to the opposite position of the target position.
   -  Wander: the butterflies will wander around in the space
 
+## <a name="future">Future Improvements</a>
+We enjoyed this project and we are planning on improve this project by adding more features and improving the performances.   
+Here are a few things we want to add:
+* Add more behaviors, such as collision avoidance, lead, and cohesion. 
+* Add more options to the UI, such as switching different scenes. 
+* Add more procedural options, such as more patterns for the butterfly wings and more shapes
+* Add a physically-based aerodynamic simulations for the butterfly flights
+
 ## <a name="reference"> Reference </a>
 ### Code and Algorithm References
 * [A Practical Model for Realistic Butterfly Flight Simulation](http://www.cad.zju.edu.cn/home/jin/tog2022/tog2022.pdf)
@@ -60,3 +71,4 @@ Our project aims to create a simulation of butterflies and control their behavio
 ### Assets References
 * [butterfly](https://sketchfab.com/3d-models/butterfly-49d5ad3857b24f10a8bfc428b4670a33)
 * [scene](https://sketchfab.com/3d-models/free-low-poly-forest-6dc8c85121234cb59dbd53a673fa2b8f)
+
