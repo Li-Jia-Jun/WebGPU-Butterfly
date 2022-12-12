@@ -16,6 +16,7 @@ Our project aims to create a simulation of butterflies and control their behavio
 * [Features](#features) 
 * [Future Improvements](#future)
 * [Reference](#reference)
+* [Blooper](#blooper)
 
 ## <a name="presentation">Presentations</a>
 * [**Final Presentation - 12/12/22**](https://docs.google.com/presentation/d/17RwpunRFOpwLk0Y-TTjAFLTOdtHMy-Pt/edit?usp=sharing&ouid=108273071647581215041&rtpof=true&sd=true)
@@ -72,3 +73,6 @@ Here are a few things we want to add:
 * [butterfly](https://sketchfab.com/3d-models/butterfly-49d5ad3857b24f10a8bfc428b4670a33)
 * [scene](https://sketchfab.com/3d-models/free-low-poly-forest-6dc8c85121234cb59dbd53a673fa2b8f)
 
+## <a name="blooper"> Blooper </a>
+A very cool blooper when we were trying to add a group behavior that makes all butterflies spin around a circle.   
+![blooper](img/blooper.gif)
