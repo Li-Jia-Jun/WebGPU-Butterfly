@@ -353,7 +353,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   m_rotation = localRotationMatrix * m_rotation;
 
   m = m_translate * m_rotation * m_scale;
-  transform[idx] = m;
+  //transform[idx] = m;
   velocitiesData[idx] = vec4<f32>(vDesired.x, vDesired.y,vDesired.z, 0); 
 //======================================================================================//
 

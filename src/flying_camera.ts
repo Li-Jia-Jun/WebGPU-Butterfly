@@ -24,7 +24,8 @@ export default class FlyingCamera {
     _position = vec3.create();
     
   constructor(element = null, refresh : CallableFunction) {
-    this._position = vec3.fromValues(0, 20, 60);
+    this._position = vec3.fromValues(-3, -4, 75);
+    this._angles = vec3.fromValues(0, -15, 0);
     this.element = element;
     //this._angles = vec3.create();
     //this._position = vec3.create();

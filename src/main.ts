@@ -13,7 +13,6 @@ import OrbitCamera from './orbit_camera';
 import FlyingCamera  from './flying_camera';
 import { mat4, vec3, vec4 } from 'gl-matrix';
 import * as DAT from 'dat.gui';
-import { stripVTControlCharacters } from 'util';
 
 
 const controls = {
@@ -163,7 +162,7 @@ export default class Application
             instance_name.push(newName);
             let even = (i % 2 == 0);
             let newTrans = this.getButterflyPos(this.controls.instance_num, i, s);
-            let newMat =  [s,0,0,0,  0,s,0,0,  0,0,s,0, s * 5 * newTrans[0], s *  5  * newTrans[1],s * 5 * newTrans[2],1]
+            let newMat =  [s,0,0,0,  0,s,0,0,  0,0,s,0, s * 12 * newTrans[0], s *  12  * newTrans[1],s * 10 * newTrans[2],1]
             instance_trans.push(newMat);
         }
 
@@ -183,13 +182,13 @@ export default class Application
     {
         // const t = [0, -10, 0];
         // const s = 0.08;
-        const t = [0, 0, 0];
-        const s = 0.5;
+        const t = [-10, 30, 40];
+        const s = 2.2;
 
         this.gltf_scene = new GLTFGroup();
         await this.gltf_scene.init(
-            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
-            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
+            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene2.gltf',        
             1,
             ['Scene'],

@@ -42,8 +42,8 @@ const pi: f32 = 3.141592653589793;
 fn distanceFog(worldPosition : vec3<f32>, color : vec4<f32>) -> vec4<f32>
 {
     let fogColor = vec4<f32>(0.8, 0.8, 0.8, 1);
-    let minDistance = 30.0;
-    let maxDistance = 60.0;
+    let minDistance = 120.0;
+    let maxDistance = 500.0;
 
     let dist = distance(camera.position, worldPosition);     
 
