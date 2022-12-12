@@ -163,7 +163,7 @@ export default class GLTFGroup
             this.#calcNodeMatrix(index, node, defaultTransform, false);
         }
         this.targetPosition = vec4.fromValues(50, 50, -10, 0);
-        this.behavior = vec4.fromValues(0,1,0,0);
+        this.behavior = vec4.fromValues(1,0,0,0);
         this.initVelocity();
         this.initForwardVectors();
         this.#printAnything();

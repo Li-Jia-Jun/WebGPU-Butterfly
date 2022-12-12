@@ -239,7 +239,8 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   var kDeparture = 600.0;
   var ROTATIONTHRESHOLD = 0.1;
   var OFFSET = 10.0;
-  var kSeek = 100.0;
+  var kSeek = 40.0;
+  var ARRIVALTHRESHOLD = 5.0;
   var idx = GlobalInvocationID.x;
   var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
 
@@ -280,14 +281,14 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   var leaderTranslationMatrix = getTranslationMatrix(transform[0]);
   var leaderPos = vec3<f32>(leaderTranslationMatrix[3][0], leaderTranslationMatrix[3][1], leaderTranslationMatrix[3][2]);
   //Arrival
-  if(behavior[1] == 1){
+  if(behavior.y == 1.0){
       targetPos = vec3<f32>(targetPos_4.x,targetPos_4.y,targetPos_4.z);
   }
   
 	
 
   // Wander
-  if(behavior[0] == 1) {
+  if(behavior.x == 1.0) {
       targetPos = vec3<f32>(1000 * (noise_gen1(f32(idx)) - 0.5) , 100 * noise_gen1(f32(idx)+3.14), 1000 *(noise_gen1(f32(idx) + 6.28) - 0.5));
       var dist2Tar = distance(targetPos, translateVec);
       if (dist2Tar < 10)
@@ -301,21 +302,25 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
 	// apply velocity to transformation
 	vDesired = kSeek * direction;
 
-  if(length(targetPos - leaderPos) < 1) {
-    vDesired = vec3<f32>(0.0,0.0,0.0);
+  if(length(targetPos - leaderPos) < ARRIVALTHRESHOLD) {
+      vDesired = vec3<f32>(0.0,0.0,0.0);
   }
 
-  // //Departure
+  //Departure
+  if(behavior.z == 1.0) {
+      var instancePos = translateVec;
+      var e = targetPos - instancePos;
+      var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
+	    vDesired = kDeparture * noise_gen1v(seed) * ( e / (length(e) * length(e)));
+  }
+  // 
   // var vDesired = vec3<f32>(0.0, 0.0, 0.0);
 	// var targetPos = vec3<f32>(10.0, -10.0, 0.0);
 	// var instancePos = translateVec;
 
   //position of each butterfly
-	var instancePos = translateVec;
 	// // // TODO: add your code here to compute Vdesired
-	// var e = targetPos - instancePos;
-  // var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
-	// vDesired = kDeparture * noise_gen1v(seed) * (- e / (length(e) * length(e)));
+	
 
   
   m_translate = translate(m_translate,vDesired.x * deltaTime, vDesired.y * deltaTime, vDesired.z * deltaTime);

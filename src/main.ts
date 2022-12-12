@@ -173,15 +173,19 @@ export default class Application
         if (this.gltf_butterfly == undefined || this.renderer_butterfly == undefined) {
             return;
         }
+        
         switch (this.controls.group_behavior) {
             case 'wander':
                 this.gltf_butterfly.behavior = vec4.fromValues(1,0,0,0);
+                break;
             case 'arrival':
                 this.gltf_butterfly.behavior = vec4.fromValues(0,1,0,0);
+                break;
             case 'departure':
                 this.gltf_butterfly.behavior = vec4.fromValues(0,0,1,0);
+                break;
         }
-       
+        console.log(this.gltf_butterfly.behavior);
     }
     async initScene()
     {
@@ -192,8 +196,8 @@ export default class Application
 
         this.gltf_scene = new GLTFGroup();
         await this.gltf_scene.init(
-            //'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
-             'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
+            //'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene2.gltf',        
             1,
             ['Scene'],
