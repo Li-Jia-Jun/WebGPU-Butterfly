@@ -34,6 +34,7 @@ struct VertexOutput
     @location(0) normal : vec3<f32>,
    @location(1) texcoord: vec2<f32>,
     @location(2) viewDir: vec3<f32>,
+    @location(3) worldPos: vec3<f32>,
 };
 
 
@@ -44,6 +45,7 @@ fn vertexMain(input : VertexInput, @builtin(instance_index) instance : u32) -> V
 
     var modelPos = modelMatrix * vec4(input.position, 1.0);
     var worldPos = instanceMatrics[instance] * modelPos;
+    output.worldPos = vec3<f32>(worldPos[0],worldPos[1],worldPos[2]);
     output.position = camera.projection * camera.view * worldPos;
     output.normal = normalize((camera.view * instanceMatrics[instance] * modelMatrix * vec4(input.normal, 0.0)).xyz);
     output.texcoord = input.texcoord;

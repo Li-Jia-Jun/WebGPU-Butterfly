@@ -5,6 +5,16 @@ struct MaterialInfo
     textureInfo : vec4<f32>,  // [0] = hasBaseColor, [1] = hasNormalMap, [2] = hasMetallicRoughnessTexture, the rest is unused yet
 };
 
+ struct Camera 
+ {
+    projection : mat4x4<f32>,
+    view : mat4x4<f32>,
+    position : vec3<f32>,
+    time : f32,
+};
+
+@group(1) @binding(0) var<uniform> camera : Camera;
+
 // Material Bind Group (Refresh binding for each primitive)
 @group(3) @binding(0) var<uniform> materialInfo : MaterialInfo;
 @group(3) @binding(1) var mySampler: sampler;  // Assume all textures here uses the same sampler for simplicity
@@ -24,9 +34,33 @@ struct VertexOutput
     @location(0) normal : vec3<f32>,
     @location(1) texcoord: vec2<f32>,
     @location(2) viewDir: vec3<f32>,
+    @location(3) worldPos: vec3<f32>,
 };
 
 const pi: f32 = 3.141592653589793;
+
+fn distanceFog(worldPosition : vec3<f32>, color : vec4<f32>) -> vec4<f32>
+{
+    let fogColor = vec4<f32>(0.8, 0.8, 0.8, 1);
+    let minDistance = 30.0;
+    let maxDistance = 60.0;
+
+    let dist = distance(camera.position, worldPosition);     
+
+    if(dist <= minDistance)
+    {
+        return color;
+    }
+    else if(dist >= maxDistance)
+    {
+        return fogColor;
+    }
+    else
+    {
+        let factor = (dist - minDistance) / (maxDistance - minDistance);
+        return fogColor * factor + (1 - factor) * color;
+    }
+}
 
 fn brdf(color: vec3<f32>,
           metallic: f32,
@@ -101,7 +135,6 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
     }
 
     let amibient = vec3(0.1, 0.1, 0.1);
-
     let finalColor = brdf(baseColor.rgb, metallic, roughness, lightDir, input.viewDir, N.xyz) + amibient;
 
     // Alpha test
@@ -110,8 +143,8 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
         discard;
     }   
 
-    // return vec4(baseColor);
-    //return vec4(0.0);
-    return vec4(surfaceColor, baseColor.a);
-    // return vec4(finalColor, baseColor.a);
+    // Distance fog
+    let color = distanceFog(input.worldPos, vec4<f32>(surfaceColor[0], surfaceColor[1], surfaceColor[2], baseColor[3]));
+
+    return vec4(color);
 }
