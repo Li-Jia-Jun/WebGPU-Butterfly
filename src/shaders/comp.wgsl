@@ -279,21 +279,17 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
 
   //Seek
   var vDesired = vec3<f32>(0.0, 0.0, 0.0);
-<<<<<<< Updated upstream
-	//var targetPos = vec3<f32>(100, 100 , -10);
-=======
 	var targetPos = vec3<f32>(targetPos_4.x,targetPos_4.y,targetPos_4.z);
->>>>>>> Stashed changes
   var leaderTranslationMatrix = getTranslationMatrix(transform[0]);
   var leaderPos = vec3<f32>(leaderTranslationMatrix[3][0], leaderTranslationMatrix[3][1], leaderTranslationMatrix[3][2]);
 
   // Wander
-  var targetPos = vec3<f32>(1000 * (noise_gen1(f32(idx)) - 0.5) , 100 * noise_gen1(f32(idx)+3.14), 1000 *(noise_gen1(f32(idx) + 6.28) - 0.5));
-  var dist2Tar = distance(targetPos, translateVec);
-  if (dist2Tar < 10)
-  {
-      targetPos = vec3<f32>(1000 * noise_gen1(f32(idx) + dist2Tar),1000 * noise_gen1(f32(idx) + dist2Tar +3.14), 1000 * noise_gen1(f32(idx) + dist2Tar + 6.28));
-  }
+  // var targetPos = vec3<f32>(1000 * (noise_gen1(f32(idx)) - 0.5) , 100 * noise_gen1(f32(idx)+3.14), 1000 *(noise_gen1(f32(idx) + 6.28) - 0.5));
+  // var dist2Tar = distance(targetPos, translateVec);
+  // if (dist2Tar < 10)
+  // {
+  //     targetPos = vec3<f32>(1000 * noise_gen1(f32(idx) + dist2Tar),1000 * noise_gen1(f32(idx) + dist2Tar +3.14), 1000 * noise_gen1(f32(idx) + dist2Tar + 6.28));
+  // }
 
 
   
