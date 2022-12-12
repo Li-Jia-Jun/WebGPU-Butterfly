@@ -168,6 +168,17 @@ fn flapWings(idx: u32)
   jointsData.joints[i32(idx) * i32(skeletonInfo.jointNum) + i32(jointIndex)].rotate = defaultRot + vec4(0 * cycle, 0 * cycle,  -45 * cycle, 0);
 }
 
+fn bump(idx: u32, translation : mat4x4<f32>) -> mat4x4<f32>
+{
+    var speed = 5.0 + noise_gen1(f32(idx));
+    var cycle = (cos(time.value * speed + f32(idx)) + 0.6) / 1.6 / (noise_gen1(f32(idx)) * 0.2 + 0.8);  
+
+    var t = translation;
+    t[3][1] = t[3][1] + 0.1 * sin(cycle);
+
+    return t;
+}
+
 
 fn updateVelocity(v: vec4<f32>, force: vec4<f32>, dt: f32) -> vec4<f32>
 {
@@ -230,6 +241,12 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   var idx = GlobalInvocationID.x;
   var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
 
+
+  if(u32(idx) >= arrayLength(&transform))
+  {
+      return;
+  }
+
   
   //model matrix transformation
   var m = transform[idx];
@@ -290,6 +307,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
   //m_translate = translate(m_translate,0, 0.0, 0);
 
+  m_translate = bump(u32(idx), m_translate);
 
   //x, y, z rotation
   var f = vec2<f32>(forwardData[idx].x, forwardData[idx].z);
@@ -320,11 +338,8 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
 //======================================================================================//
 
     // Animation here
-  if(u32(idx) < arrayLength(&transform)) {
     flapWings(idx);
-
     update_skeleton(i32(idx));
-  }
 }
 
 
