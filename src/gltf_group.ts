@@ -125,6 +125,7 @@ export default class GLTFGroup
     velocity: vec4[];           // velocity vectors to pass
     forward: vec4[];
     names : string[];
+    targetPosition: vec4;
     instanceCount;
 
     hasJoint : boolean;
@@ -160,7 +161,8 @@ export default class GLTFGroup
         {
             this.#calcNodeMatrix(index, node, defaultTransform, false);
         }
-
+        this.targetPosition = vec4.fromValues(50, 50, -10, 0);
+        
         this.initVelocity();
         this.initForwardVectors();
         this.#printAnything();
