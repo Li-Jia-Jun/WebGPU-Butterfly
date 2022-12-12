@@ -251,17 +251,19 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   //model matrix transformation
   var m = transform[idx];
 
-   var m_translate = getTranslationMatrix(m);
-   var m_rotation = getScaleAndRotationMatrix(m);
+  var m_translate = getTranslationMatrix(m);
+  var m_rotation = getScaleAndRotationMatrix(m);
   
-   var sx = m_rotation[3][0];
-   var sy = m_rotation[3][1]; 
-   var sz = m_rotation[3][2];
+  var scaleVar = (noise_gen1(f32(idx)) * 0.4) - 0.2 + 1;
+  var sx =  scaleVar;
+  var sy =  scaleVar; 
+  var sz =  scaleVar;
 
   var m_scale = mat4x4<f32>(vec4<f32>(sx, 0, 0, 0), 
                             vec4<f32>(0, sy, 0, 0), 
                             vec4<f32>(0, 0, sz, 0), 
                             vec4<f32>(0, 0, 0, 1)); 
+        
   m_rotation[3][0] = 0;
   m_rotation[3][1] = 0; 
   m_rotation[3][2] = 0;
