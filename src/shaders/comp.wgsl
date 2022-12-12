@@ -226,6 +226,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   const kDeparture = 600;
   const ROTATIONTHRESHOLD = 0.1;
   const OFFSET = 10;
+  const kSeek = 50;
 
   var idx = GlobalInvocationID.x;
   //model matrix transformation
@@ -263,7 +264,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   //position of each butterfly
 	var instancePos = translateVec;
 	// TODO: add your code here to compute Vdesired
-	vDesired = 40 * normalize(targetPos - instancePos);
+	vDesired = kSeek * normalize(targetPos - instancePos);
   
 
   // //Departure
@@ -280,9 +281,9 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
 
 
   //velocitiesData[idx] = vDesired;
-  //m_translate = translate(m_translate,vDesired.x * deltaTime, vDesired.y * deltaTime, vDesired.z * deltaTime);
+  m_translate = translate(m_translate,vDesired.x * deltaTime, vDesired.y * deltaTime, vDesired.z * deltaTime);
    //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
-  m_translate = translate(m_translate,0, 0.0, 0);
+  //m_translate = translate(m_translate,0, 0.0, 0);
 
 
   //x, y, z rotation
