@@ -120,18 +120,15 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
     {
         if(u32(input.instance % 4) == 0)
         {
-                //return vec4(baseColor.r, baseColor.g, baseColor.b +(noise_gen1(input.instance) - 0.5) * 0.1, 0.0);
-                return vec4(baseColor.r, baseColor.g, baseColor.b, 0.0);
+            return vec4(baseColor.r, baseColor.g, baseColor.b, 0.0);
         }
         else if (u32(input.instance % 4) == 1)
         {
-            //return vec4(baseColor.r, baseColor.b + (noise_gen1(input.instance) - 0.5) * 0.2, baseColor.g , 0.0);
             return vec4(baseColor.g, baseColor.b, baseColor.r, 0.0);
         }
         else if (u32(input.instance % 4) == 2)
         {
             return vec4(baseColor.b, baseColor.g, baseColor.r, 0.0);
-            //return vec4(baseColor.b + (noise_gen1(input.instance) - 0.5) * 0.2, baseColor.r, baseColor.g , 0.0);
         }
         else
         {
