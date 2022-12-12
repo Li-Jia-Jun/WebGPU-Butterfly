@@ -11,11 +11,24 @@ import sceneFragShader from './shaders/gltf_scene.frag.wgsl';
 
 import OrbitCamera from './orbit_camera';
 import FlyingCamera  from './flying_camera';
-import { mat4 } from 'gl-matrix';
+import { mat4, vec3, vec4 } from 'gl-matrix';
 import * as DAT from 'dat.gui';
 import { stripVTControlCharacters } from 'util';
 
 
+<<<<<<< Updated upstream
+=======
+const controls = {
+    frame_rate: 0,
+    instance_num: 1,
+    x: 1,
+    y: 2,
+    z: 3,
+    amplitude: 1,
+    air_density: 1,
+    phase_angle: 0,
+};
+>>>>>>> Stashed changes
 
 export default class Application 
 {
@@ -98,12 +111,24 @@ export default class Application
             .onChange(() => {
                 this.onInstanceChanged();
             });
+<<<<<<< Updated upstream
             gui.add(this.controls,'Enable Procedural Color' );
             var forceGUI = gui.addFolder('Force');
             forceGUI.add(this.controls,'frequency', 0, 1).step(0.01);
             forceGUI.add(this.controls,'amplitude', 0, 4).step(1);
             forceGUI.add(this.controls,'air_density',0, 2 ).step(0.1);
             forceGUI.add(this.controls,'phase_angle',0, 360).step(1);
+=======
+            var forceGUI = gui.addFolder('Group Behavior');
+            var targetPosGUI = forceGUI.addFolder("Target Position");
+            targetPosGUI.add(controls, 'x').onChange(() => {this.onPositionChange();});
+            targetPosGUI.add(controls, 'y').onChange(() => {this.onPositionChange();});
+            targetPosGUI.add(controls, 'z').onChange(() => {this.onPositionChange();});
+         //   forceGUI.add(controls,'target_pos').name('Target Pos').listen();
+            forceGUI.add(controls,'amplitude', 0, 4).step(1);
+            forceGUI.add(controls,'air_density',0, 2 ).step(0.1);
+            forceGUI.add(controls,'phase_angle',0, 360).step(1);
+>>>>>>> Stashed changes
 
             // HTML stuff
             this.canvas = document.getElementById('gfx') as HTMLCanvasElement;
@@ -157,6 +182,17 @@ export default class Application
         this.gltf_butterfly.refreshInstance(this.controls.instance_num, instance_name, instance_trans);
         this.renderer_butterfly.refreshInstance();
     }
+<<<<<<< Updated upstream
+=======
+
+    onPositionChange() {
+        if (this.gltf_butterfly == undefined || this.renderer_butterfly == undefined) {
+            return;
+        }
+        this.gltf_butterfly.targetPosition = vec4.fromValues(controls.x, controls.y, controls.z, 0);
+        console.log(this.gltf_butterfly.targetPosition);
+    }
+>>>>>>> Stashed changes
     
     async initScene()
     {
@@ -167,9 +203,15 @@ export default class Application
 
         this.gltf_scene = new GLTFGroup();
         await this.gltf_scene.init(
+<<<<<<< Updated upstream
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
             'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene2.gltf',        
+=======
+            //'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
+            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
+             'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene2.gltf',        
+>>>>>>> Stashed changes
             1,
             ['Scene'],
             [mat4.fromValues(s,0,0,0, 0,s,0,0, 0,0,s,0, t[0],t[1],t[2],1)]);
@@ -304,7 +346,8 @@ export default class Application
         mat4.perspective(projMat, this.fov, aspect, this.zNear, this.zFar);
         
         // Update camera buffer for each renderer
-        this.renderer_butterfly.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, this.time);    
+        this.renderer_butterfly.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, this.time); 
+        this.renderer_butterfly.updateTargetPosBuffer();   
         this.renderer_scene.updateCameraBuffer(projMat, this.camera.viewMatrix, this.camera.position, this.time);   
     
     }
