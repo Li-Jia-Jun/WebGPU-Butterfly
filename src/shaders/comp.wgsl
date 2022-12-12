@@ -44,6 +44,7 @@ struct SkeletonInfo
 @group(0) @binding(2) var<storage, read_write> jointTransforms: array<mat4x4<f32>>;
 @group(0) @binding(3) var<storage, read_write> velocitiesData: array<vec4<f32>>;
 @group(0) @binding(4) var<storage, read_write> forwardData: array<vec4<f32>>;
+@group(0) @binding(5) var<uniform> targetPos_4: vec4<f32>;
 
 
 
@@ -278,7 +279,11 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
 
   //Seek
   var vDesired = vec3<f32>(0.0, 0.0, 0.0);
+<<<<<<< Updated upstream
 	//var targetPos = vec3<f32>(100, 100 , -10);
+=======
+	var targetPos = vec3<f32>(targetPos_4.x,targetPos_4.y,targetPos_4.z);
+>>>>>>> Stashed changes
   var leaderTranslationMatrix = getTranslationMatrix(transform[0]);
   var leaderPos = vec3<f32>(leaderTranslationMatrix[3][0], leaderTranslationMatrix[3][1], leaderTranslationMatrix[3][2]);
 
