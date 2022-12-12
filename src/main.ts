@@ -75,7 +75,6 @@ export default class Application
         {
             this.renderer_butterfly.procedural = 0;
         }
-        // console.log(this.renderer_butterfly.procedural);
     }
     constructor(){}
 

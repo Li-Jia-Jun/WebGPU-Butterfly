@@ -68,7 +68,7 @@ fn vertexMain(input : VertexInput, @builtin(instance_index) instance : u32) -> V
     }
     else 
     {
-                output.normal = normalize((camera.view * instanceMatrics[instance] * modelMatrix  * vec4(input.normal, 0.0)).xyz);
+        output.normal = normalize((camera.view * instanceMatrics[instance] * modelMatrix  * vec4(input.normal, 0.0)).xyz);
     }
         var worldPos = instanceMatrics[instance] * modelPos;
         output.position = camera.projection * camera.view * worldPos;
