@@ -236,7 +236,7 @@ fn noise_gen1(x: f32) -> f32
 fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) 
 {
   var deltaTime = 0.01;
-  var kDeparture = 600.0;
+  var kDeparture = 1000.0;
   var ROTATIONTHRESHOLD = 0.1;
   var OFFSET = 10.0;
   var kSeek = 40.0;
@@ -310,8 +310,8 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   if(behavior.z == 1.0) {
       var instancePos = translateVec;
       var e = targetPos - instancePos;
-      var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
-	    vDesired = kDeparture * noise_gen1v(seed) * ( e / (length(e) * length(e)));
+     // var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
+	    vDesired = kDeparture  * ( -e / (length(e) * length(e)));
   }
   // 
   // var vDesired = vec3<f32>(0.0, 0.0, 0.0);
