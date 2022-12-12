@@ -178,7 +178,7 @@ fn updateVelocity(v: vec4<f32>, force: vec4<f32>, dt: f32) -> vec4<f32>
 
 fn noise_gen1v(p: vec3<f32>) -> f32 
  { 
-    return fract(sin((dot(p, vec3(127.1, 311.7, 191.999)))) * 43758.5453); 
+    return fract(sin((dot(p, vec3(127.1, 311.7, 191.999)))) * 43758.5453) -0.5; 
  } 
 
 fn noise_gen1(x: f32) -> f32 
@@ -222,13 +222,15 @@ fn noise_gen1(x: f32) -> f32
 @compute @workgroup_size(64)
 fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) 
 {
-  const deltaTime = 0.01;
-  const kDeparture = 600;
-  const ROTATIONTHRESHOLD = 0.1;
-  const OFFSET = 10;
-  const kSeek = 50;
-
+  var deltaTime = 0.01;
+  var kDeparture = 600.0;
+  var ROTATIONTHRESHOLD = 0.1;
+  var OFFSET = 10.0;
+  var kSeek = 50.0;
   var idx = GlobalInvocationID.x;
+  var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
+
+  
   //model matrix transformation
   var m = transform[idx];
 
@@ -254,47 +256,50 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   velocity = updateVelocity(velocity, force, deltaTime);
   velocitiesData[idx] = velocity;
   //=============================================================================//  
+
   //Seek
   var vDesired = vec3<f32>(0.0, 0.0, 0.0);
-  var l = sqrt(skeletonInfo.jointNum);
-  var z = f32(idx) % l;
-  var y = (f32(idx) / l) % l;
-  var x = f32(idx) / (l * l);
-	var targetPos = vec3<f32>(100 + x * OFFSET  , 100 + y * OFFSET , -5 + z * OFFSET);
-  //position of each butterfly
-	var instancePos = translateVec;
-	// TODO: add your code here to compute Vdesired
-	vDesired = kSeek * normalize(targetPos - instancePos);
+	var targetPos = vec3<f32>(100, 100 , -10);
+  var leaderTranslationMatrix = getTranslationMatrix(transform[0]);
+  var leaderPos = vec3<f32>(leaderTranslationMatrix[3][0], leaderTranslationMatrix[3][1], leaderTranslationMatrix[3][2]);
+
   
+  var direction = normalize(targetPos - leaderPos);
+  
+	// TODO: add your code here to compute Vdesired
+	vDesired = kSeek * direction;
+
+  if(length(targetPos - leaderPos) < 1) {
+    vDesired = vec3<f32>(0.0,0.0,0.0);
+  }
 
   // //Departure
   // var vDesired = vec3<f32>(0.0, 0.0, 0.0);
 	// var targetPos = vec3<f32>(10.0, -10.0, 0.0);
 	// var instancePos = translateVec;
 
-
+  //position of each butterfly
+	var instancePos = translateVec;
 	// // // TODO: add your code here to compute Vdesired
 	// var e = targetPos - instancePos;
   // var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
 	// vDesired = kDeparture * noise_gen1v(seed) * (- e / (length(e) * length(e)));
 
 
-
-  //velocitiesData[idx] = vDesired;
   m_translate = translate(m_translate,vDesired.x * deltaTime, vDesired.y * deltaTime, vDesired.z * deltaTime);
-   //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
+  //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
   //m_translate = translate(m_translate,0, 0.0, 0);
 
 
   //x, y, z rotation
-
   var f = vec2<f32>(forwardData[idx].x, forwardData[idx].z);
-  //f = normalize(f);
   var v_n = vec2<f32>(vDesired.x, vDesired.z);
-  var theta = acos(dot(v_n,f) / (length(v_n) * length(f)));
+  var theta = 0.0;
+  if(length(v_n) != 0) {
+      theta = acos(dot(v_n,f) / (length(v_n) * length(f)));
+  }
   
-  //m_translate = translate(m_translate,theta * 0.1 , 0, 0);
-  var rot = vec4<f32>(0, theta, 0, 0);
+  var rot = vec4<f32>(0, -theta, 0, 0);
   if(abs(theta) < ROTATIONTHRESHOLD) {
       rot = vec4<f32>(0, 0, 0, 0);
   }
@@ -314,7 +319,6 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   velocitiesData[idx] = vec4<f32>(vDesired.x, vDesired.y,vDesired.z, 0); 
 //======================================================================================//
 
-  //{
     // Animation here
   if(u32(idx) < arrayLength(&transform)) {
     flapWings(idx);
