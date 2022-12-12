@@ -311,7 +311,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
      // var instancePos = translateVec;
       var e = translateVec - targetPos;
       var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
-	    vDesired = kDeparture  * noise_gen1v(seed) * ( e / sqrt(length(e) * length(e)));
+	    vDesired = kDeparture  * ( e / sqrt(length(e) * length(e)));
   }
   // 
   // var vDesired = vec3<f32>(0.0, 0.0, 0.0);
