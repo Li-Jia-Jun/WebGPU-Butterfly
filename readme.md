@@ -7,12 +7,11 @@ Realistic Butterfly Flight and Behavior Simulation with WebGPU
 * [Shineng Tang](https://www.linkedin.com/in/shineng-t-224192195/)
 
 ## **Overview**
-
 Our project aims to create a simulation of butterflies and control their behaviors using WebGPU. We created a hierarchical rigged skeleton for the butterfy, animated the butterflies by using the bones, and used instancing to increase the performance so that it can run in realtime.    
 
 ## Table of Contents  
-* [Features](#features) 
 * [Presentations](#presentation)
+* [Features](#features) 
 * [Reference](#reference)
 
 ## <a name="presentation">Presentations</a>
@@ -33,6 +32,8 @@ Our project aims to create a simulation of butterflies and control their behavio
   - Procedurally change the color for each newly instanced butterfly 
 - **Control GUI**
   - We created a UI that allows the user to change many key parameters for the simulation, such as the number of the butterflies, behaviors, and colors so that the user can easily see the visual effects of different scenes easily. 
+- **Distance Fog**
+  - Using distance-based fog to hide the boundary of the scene
 ### Technical Features
 - **WebGPU Compute and Rendering Pipeline**
   - Compute shaders compute the new joint transformations and deform the butterfly mesh accordingly
@@ -40,18 +41,22 @@ Our project aims to create a simulation of butterflies and control their behavio
 - **Instanced Rendering with Animations**
   - Instancing rendering ensures minimum memory consumption and maximum rendering performance 
   - Instancing with varying animations and behaviors for each instance/ 
-- **Hierachy skeleton loader and Mesh deformer**
+- **Hierachy Skeleton Loader and Mesh Deformer**
   - We rigged the butterfly mesh with Blender and successfully use our pipeline and the skeleton to deform the mesh.
   - Joint hierachy is correctly maintained and used in computation. A novel algorithm is used to solve the problem that there is no recursion in the shaders.   
 ### Simulation Features
-- **Butterfly simulations**
+- **Butterfly Simulations**
   - Currently we have simple procedurally generated path and simple forces like gravity and wind for the butterfly
 - **Behavior Controls**
-  -  Seek
-  -  Departure
-  -  Wander
+  -  Seek: all the butterflies will seek a position and gather there.
+  -  Departure: all the butterflies will go to the opposite position of the target position.
+  -  Wander: the butterflies will wander around in the space
 
 ## <a name="reference"> Reference </a>
+### Code and Algorithm References
 * [A Practical Model for Realistic Butterfly Flight Simulation](http://www.cad.zju.edu.cn/home/jin/tog2022/tog2022.pdf)
 * [Efficiently rendering glTF models - A WebGPU Case Study](https://toji.github.io/webgpu-gltf-case-study/)
 * [WebGPU Samples](https://austin-eng.com/webgpu-samples)
+### Assets References
+* [butterfly](https://sketchfab.com/3d-models/butterfly-49d5ad3857b24f10a8bfc428b4670a33)
+* [scene](https://sketchfab.com/3d-models/free-low-poly-forest-6dc8c85121234cb59dbd53a673fa2b8f)
