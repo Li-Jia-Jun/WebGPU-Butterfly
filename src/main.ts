@@ -1,5 +1,7 @@
 import GLTFGroup from './gltf_group';
 import GltfRenderer from './gltf_renderer';
+const Stats = require('stats-js');
+
 
 import butterflyVertShader from './shaders/gltf.vert.wgsl';
 import butterflyFragShader from './shaders/gltf.frag.wgsl';
@@ -11,6 +13,7 @@ import OrbitCamera from './orbit_camera';
 import FlyingCamera  from './flying_camera';
 import { mat4 } from 'gl-matrix';
 import * as DAT from 'dat.gui';
+import { stripVTControlCharacters } from 'util';
 
 
 
@@ -45,15 +48,15 @@ export default class Application
     depthTexture: GPUTexture;
     depthTextureView: GPUTextureView;
 
-    //frame: number = -1;
-    prev_time: number = 0;
     time : number;      // the application running time in seconds
 
     canRun : boolean;
 
+    stats = Stats();
+
+
     // GUI
     controls = {
-        frame_rate: 0,
         instance_num: 1,
         'Enable Procedural Color': this.enableProcedural,
         frequency: 1,
@@ -80,7 +83,11 @@ export default class Application
     async start()
     {
 
-
+        this.stats.setMode(0);
+        this.stats.domElement.style.position = 'absolute';
+        this.stats.domElement.style.left = '0px';
+        this.stats.domElement.style.top = '0px';
+        document.body.appendChild(this.stats.domElement);
 
         this.canRun = await this.initializeWebGPU();
 
@@ -89,7 +96,6 @@ export default class Application
             // GUI
             const gui = new DAT.GUI();
             gui.width = 300;
-            gui.add(this.controls, 'frame_rate').name("FPS").listen();
             gui.add(this.controls, 'instance_num', 1, 500).step(1).name('Number of Butterflies')
             .onChange(() => {
                 this.onInstanceChanged();
@@ -314,13 +320,7 @@ export default class Application
 
     run = (timestamp : number) =>
     {
-        //this.frame += 1; 
-
-        //console.log(this.frame);
-        //console.log("delta time", this.time - this.prev_time );
-        this.controls.frame_rate = 1 / (this.time - this.prev_time);
-        this.prev_time = this.time;
-
+        this.stats.begin();
 
         // Update data in each frame
         this.updateFrameData(timestamp);
@@ -334,6 +334,7 @@ export default class Application
 
         // Loop
         requestAnimationFrame(this.run);
+        this.stats.end();
     }
 }
 
