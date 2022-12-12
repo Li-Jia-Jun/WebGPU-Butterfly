@@ -40,6 +40,7 @@ struct VertexOutput
     @location(0) normal : vec3<f32>,
     @location(1) texcoord: vec2<f32>,
     @location(2) viewDir: vec3<f32>,
+    @location(3) instance: f32,
 };
 
 
@@ -61,23 +62,20 @@ fn vertexMain(input : VertexInput, @builtin(instance_index) instance : u32) -> V
 
         // Skinned mesh vertex will only affected by joints so 'modelMatrix' is removed here
         modelPos = jointMatrix * vec4(input.position, 1.0);
-
-        var worldPos = instanceMatrics[instance] * modelPos;
-        output.position = camera.projection * camera.view * worldPos;
         output.normal = normalize((camera.view * instanceMatrics[instance] * jointMatrix * vec4(input.normal, 0.0)).xyz);
+
+
+    }
+    else 
+    {
+                output.normal = normalize((camera.view * instanceMatrics[instance] * modelMatrix  * vec4(input.normal, 0.0)).xyz);
+    }
+        var worldPos = instanceMatrics[instance] * modelPos;
+        output.position = camera.projection * camera.view * worldPos;
         output.texcoord = input.texcoord;
 
         output.viewDir = normalize(camera.position.xyz - worldPos.xyz);
+        output.instance = f32(instance);
         return output;
-    }
-    else
-    {
-        var worldPos = instanceMatrics[instance] * modelPos;
-        output.position = camera.projection * camera.view * worldPos;
-        output.normal = normalize((camera.view * instanceMatrics[instance] * modelMatrix * vec4(input.normal, 0.0)).xyz);
-        output.texcoord = input.texcoord;
-        output.viewDir = normalize(camera.position.xyz - worldPos.xyz);
-        return output;
-    }
 }
 

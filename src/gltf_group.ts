@@ -424,7 +424,7 @@ export default class GLTFGroup
 
     #printAnything()
     {
-         console.log(this.jointsMap);
+        // console.log(this.jointsMap);
         // console.log("root indices = " + this.skRootIndices);
         // console.log("parent indices = " + this.jtParentIndices);
         // console.log("layer array = " + this.jtLayerArray);              

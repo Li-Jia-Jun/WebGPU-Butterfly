@@ -2,7 +2,7 @@ struct MaterialInfo
 {
     baseColorFactor : vec4<f32>,
     propertyInfo : vec4<f32>, // [0] = metallic fatcor, [1] = roughness factor, the rest is unused yet
-    textureInfo : vec4<f32>,  // [0] = hasBaseColor, [1] = hasNormalMap, [2] = hasMetallicRoughnessTexture, the rest is unused yet
+    textureInfo : vec4<f32>,  // [0] = hasBaseColor, [1] = hasNormalMap, [2] = hasMetallicRoughnessTexture, [3] = enableProcedural
 };
 
 // Material Bind Group (Refresh binding for each primitive)
@@ -24,7 +24,13 @@ struct VertexOutput
     @location(0) normal : vec3<f32>,
     @location(1) texcoord: vec2<f32>,
     @location(2) viewDir: vec3<f32>,
+    @location(3) instance: f32,
 };
+
+fn noise_gen1(x: f32) -> f32 
+ { 
+    return fract(sin(x * 127.1) * 43758.5453);
+ } 
 
 const pi: f32 = 3.141592653589793;
 
@@ -110,7 +116,26 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
         discard;
     }   
 
-    return vec4(baseColor);
+    if (materialInfo.propertyInfo[3] == 1.0)
+    {
+        if(u32(input.instance % 3) == 0)
+        {
+                return vec4(baseColor.r, baseColor.g, baseColor.b +(noise_gen1(input.instance) - 0.5) * 0.1, 0.0);
+
+        }
+        else if (u32(input.instance % 3) == 1)
+        {
+            return vec4(baseColor.r, baseColor.b + (noise_gen1(input.instance) - 0.5) * 0.2, baseColor.g , 0.0);
+        }
+        else 
+        {
+            return vec4(baseColor.b + (noise_gen1(input.instance) - 0.5) * 0.2, baseColor.r, baseColor.g , 0.0);
+        }
+    }
+    else
+    {
+        return vec4(baseColor);
+    }
     //return vec4(vec3(1  / (materialID.x + 1)), 1.0);
     //return vec4(0.0);
     // return vec4(surfaceColor, baseColor.a);

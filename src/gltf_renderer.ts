@@ -73,6 +73,7 @@ export default class GltfRenderer
     materialBindGroupLayout: GPUBindGroupLayout;
     materialInfoBuffer : GPUBuffer;
     textureSampler: GPUSampler;
+    procedural: number;
 
     constantBindGroupLayout: GPUBindGroupLayout;
     constantBindGroup : GPUBindGroup;
@@ -161,6 +162,8 @@ export default class GltfRenderer
         this.canRender = false;
 
         await this.initializeWebGPUAndGLTF(); 
+
+        this.procedural = 0;
     }
 
     refreshInstance()
@@ -501,7 +504,7 @@ export default class GltfRenderer
         let metallicRoughnessGPUTexture = metallicRoughnessImgIdx >= 0 ? this.textures[metallicRoughnessImgIdx] : this.emptyTexture;
 
 
-        let textureInfoArrayBuffer = new Float32Array([baseColorIdx, normalMapIdx, metallicRoughnessTextureIdx, 0]).buffer;
+        let textureInfoArrayBuffer = new Float32Array([baseColorIdx, normalMapIdx, metallicRoughnessTextureIdx, this.procedural]).buffer;
         
         // Material Info Buffer
         if(this.materialInfoBuffer == undefined)

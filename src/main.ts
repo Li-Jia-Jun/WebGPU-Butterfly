@@ -12,14 +12,7 @@ import FlyingCamera  from './flying_camera';
 import { mat4 } from 'gl-matrix';
 import * as DAT from 'dat.gui';
 
-const controls = {
-    frame_rate: 0,
-    instance_num: 1,
-    frequency: 1,
-    amplitude: 1,
-    air_density: 1,
-    phase_angle: 0,
-};
+
 
 export default class Application 
 {
@@ -58,10 +51,37 @@ export default class Application
 
     canRun : boolean;
 
+    // GUI
+    controls = {
+        frame_rate: 0,
+        instance_num: 1,
+        'Enable Procedural Color': this.enableProcedural,
+        frequency: 1,
+        amplitude: 1,
+        air_density: 1,
+        phase_angle: 0,
+    };
+
+    enableProcedural()
+    {
+        console.log(this);
+        if (this.renderer_butterfly.procedural == 0)
+        {
+            this.renderer_butterfly.procedural = 1;
+        }
+        else 
+        {
+            this.renderer_butterfly.procedural = 0;
+        }
+        console.log(this.renderer_butterfly.procedural);
+    }
     constructor(){}
 
     async start()
     {
+
+
+
         this.canRun = await this.initializeWebGPU();
 
         if(this.canRun)
@@ -69,16 +89,17 @@ export default class Application
             // GUI
             const gui = new DAT.GUI();
             gui.width = 300;
-            gui.add(controls, 'frame_rate').name("FPS").listen();
-            gui.add(controls, 'instance_num', 1, 500).step(1).name('Number of Butterflies')
+            gui.add(this.controls, 'frame_rate').name("FPS").listen();
+            gui.add(this.controls, 'instance_num', 1, 500).step(1).name('Number of Butterflies')
             .onChange(() => {
                 this.onInstanceChanged();
             });
+            gui.add(this.controls,'Enable Procedural Color' );
             var forceGUI = gui.addFolder('Force');
-            forceGUI.add(controls,'frequency', 0, 1).step(0.01);
-            forceGUI.add(controls,'amplitude', 0, 4).step(1);
-            forceGUI.add(controls,'air_density',0, 2 ).step(0.1);
-            forceGUI.add(controls,'phase_angle',0, 360).step(1);
+            forceGUI.add(this.controls,'frequency', 0, 1).step(0.01);
+            forceGUI.add(this.controls,'amplitude', 0, 4).step(1);
+            forceGUI.add(this.controls,'air_density',0, 2 ).step(0.1);
+            forceGUI.add(this.controls,'phase_angle',0, 360).step(1);
 
             // HTML stuff
             this.canvas = document.getElementById('gfx') as HTMLCanvasElement;
@@ -119,20 +140,19 @@ export default class Application
         let s : number = 1.5;
         let instance_name = [];
         let instance_trans = [];
-        for (let i=1; i<=controls.instance_num;++i)
+        for (let i=1; i<=this.controls.instance_num;++i)
         {
             let newName = ("b"+(i+1).toString());
             instance_name.push(newName);
             let even = (i % 2 == 0);
-            let newTrans = this.getButterflyPos(controls.instance_num, i, s);
+            let newTrans = this.getButterflyPos(this.controls.instance_num, i, s);
             let newMat =  [s,0,0,0,  0,s,0,0,  0,0,s,0, s * 5 * newTrans[0], s *  5  * newTrans[1],s * 5 * newTrans[2],1]
             instance_trans.push(newMat);
         }
 
-        this.gltf_butterfly.refreshInstance(controls.instance_num, instance_name, instance_trans);
+        this.gltf_butterfly.refreshInstance(this.controls.instance_num, instance_name, instance_trans);
         this.renderer_butterfly.refreshInstance();
     }
-
     
     async initScene()
     {
@@ -175,7 +195,7 @@ export default class Application
         // create instancing name list and transform list
         let instance_name = [];
         let instance_trans = [];
-        for (let i=1; i<=controls.instance_num;++i)
+        for (let i=1; i<=this.controls.instance_num;++i)
         {
             let newName = ("b"+(i+1).toString());
             instance_name.push(newName);
@@ -204,7 +224,7 @@ export default class Application
 
         await this.gltf_butterfly.init(
             'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/butterfly/butterfly-new-skel.gltf',
-            controls.instance_num,
+            this.controls.instance_num,
             instance_name,
             instance_trans);
         
@@ -298,7 +318,7 @@ export default class Application
 
         //console.log(this.frame);
         //console.log("delta time", this.time - this.prev_time );
-        controls.frame_rate = 1 / (this.time - this.prev_time);
+        this.controls.frame_rate = 1 / (this.time - this.prev_time);
         this.prev_time = this.time;
 
 
