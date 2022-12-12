@@ -17,22 +17,17 @@ Our project aims to create a realistic simulation of butterfly flights and behav
 - **WebGPU Compute and Rendering Pipeline with instancing rendering**
   - Compute shaders compute the new joint transformations
   - Instancing rendering ensures minimum memory consumption and maximum rendering performance   
-    ![](img/instancing.gif)   
 - **glTF loader with texture, material loading and PBR shading**
   - Loading glTF files with skeleton information and PBR-based materials
   - Support loading multiple glTF meshes.   
-  ![](img/gltf_loader.png)   
 - **Hierachy skeleton loader and mesh deformer by using the skeleton**
   - We rigged the butterfly mesh with Blender and successfully use our pipeline and the skeleton to deform the mesh.
   - Joint hierachy is correctly maintained and used in computation   
-  ![](img/joint.gif)   
 - **Butterfly simulations**
   - Currently we have simple procedurally generated path and simple forces like gravity and wind for the butterfly
   - We will add realistic flight simulation to the butterflies based on this [paper](http://www.cad.zju.edu.cn/home/jin/tog2022/tog2022.pdf)    
-  ![](img/simulation.gif)   
 - **Simulation and bahavior control GUI**
   - Allow the users to change key parameters in the simulation, such as the number of butterflies, the magnitude of different forces, and the current behaviors being simulated.    
-    ![](img/gui.gif)   
 
 ## <a name="history">Update History</a>
 ### **Milestone 3 - 12/05/22**
