@@ -1,17 +1,28 @@
 Realistic Butterfly Flight and Behavior Simulation with WebGPU
 ==================================
-**University of Pennsylvania, CIS 565: GPU Programming and Architecture, Final Project**
-*  Author: Jiajun Li, Haoquan Liang, Shineng Tang
+### University of Pennsylvania, CIS 565: GPU Programming and Architecture, Final Project
+#### Author:   
+* [Jiajun Li](https://www.linkedin.com/in/jiajun-li-5063a4217/) 
+* [Haoquan Liang](https://www.linkedin.com/in/leohaoquanliang/)
+* [Shineng Tang](https://www.linkedin.com/in/shineng-t-224192195/)
 
 ## **Overview**
 
-Our project aims to create a realistic simulation of butterfly flights and behaviors using WebGPU. The method we are using relies on the aerodynamic-based CFD solver, which guarantees realistic results, while using a hierarchical rigged skeleton to increase the performance so that it can run in realtime.    
-![](img/overview.gif)   
+Our project aims to create a simulation of butterflies and control their behaviors using WebGPU. We created a hierarchical rigged skeleton for the butterfy, animated the butterflies by using the bones, and used instancing to increase the performance so that it can run in realtime.    
+![overview](img/overview.gif)   
 
 ## Table of Contents  
 * [Features](#features) 
-* [Update History](#history)
+* [Presentations](#presentation)
 * [Reference](#reference)
+
+## <a name="presentation">Presentations</a>
+* [**Final Presentation - 12/12/22**](https://docs.google.com/presentation/d/17RwpunRFOpwLk0Y-TTjAFLTOdtHMy-Pt/edit?usp=sharing&ouid=108273071647581215041&rtpof=true&sd=true)
+* [Milestone 3 - 12/05/22](https://docs.google.com/presentation/d/1AHIefwlu55ZyYZG1VEadliJOUGMHE7-N/edit#slide=id.g19cb66c9ca1_0_15)
+* [Milestone 2 - 11/28/22](https://docs.google.com/presentation/d/1AHIefwlu55ZyYZG1VEadliJOUGMHE7-N/edit?rtpof=true)
+* [Milestone 1 - 11/16/22](https://docs.google.com/presentation/d/1D0KU-Wp5UGeHj1HUCtebzcEjDT0gydEKm9OTPFgEmzs/edit#slide=id.g18fde25b9ae_9_0)
+* [Pitch - 11/6/22](https://docs.google.com/presentation/d/1jvJxEsBRErgb7ftC49tvywUgjpmYqgujXNGTN85En-0/edit?usp=sharing)
+
 
 ## <a name="features">Features</a>
 - **WebGPU Compute and Rendering Pipeline with instancing rendering**
@@ -34,58 +45,8 @@ Our project aims to create a realistic simulation of butterfly flights and behav
   - Allow the users to change key parameters in the simulation, such as the number of butterflies, the magnitude of different forces, and the current behaviors being simulated.    
     ![](img/gui.gif)   
 
-## <a name="history">Update History</a>
-### **Milestone 3 - 12/05/22**
-Slides: https://docs.google.com/presentation/d/1AHIefwlu55ZyYZG1VEadliJOUGMHE7-N/edit#slide=id.g19cb66c9ca1_0_15
-
-Progress:
-- glTF Texture/Material loading with PBR shading
-- Skeleton hierarchy update in the Compute Shader
-- Simple forces and movement simulation
-- Instanced butterfly with various movement cycle.
-
-Next Step:
-- Add more forces simulations
-- Add group behaviors
-- Improve UI/UX
-- Add more scene presets
-- Add more features to the glTF loader (multiple materials support)
-
-### **Milestone 2 - 11/28/22**
-Slides: https://docs.google.com/presentation/d/1AHIefwlu55ZyYZG1VEadliJOUGMHE7-N/edit?rtpof=true
-
-Progress:
-- Approached the paper authors and got response
-- Added a flying free famera
-- Built the GUI framework
-- Combined the milestone 1 components (instancing rendering with a GLTF loader that supports loading multiple meshes)
-- Built the framework for Compute Shader Pipeline, which will be used to compute the new joint transformations at each tick
-- Attached the skeleton to the mesh and successfully deformed the mesh using the skeleton
-
-Next step:
-- Add simple force simulations to the butterfly
-- Add texture/material support for the glTF loader and use PBR shading
-- Add a skybox renderer
-- Add group behaviors
-- Add a scene renderer
-
-
-### **Milestone 1 - 11/16/22**
-
-Slide: https://docs.google.com/presentation/d/1D0KU-Wp5UGeHj1HUCtebzcEjDT0gydEKm9OTPFgEmzs/edit#slide=id.g18fde25b9ae_9_0
-
-Progress:
-- Rigged butterfly mesh and example animation
-- WebGPU cube instance rendering
-- Basic GLTF render pipeline and orbit camera
-- Basic HTML UI
-
-Next step:
-- Approach the author
-- Combine features in milestone 1
-- GLTF texture and animation support
-- Implement full content from the reference paper including force simulation and maneuvering control
-- More robust UI
 
 ## <a name="reference"> Reference </a>
 * [A Practical Model for Realistic Butterfly Flight Simulation](http://www.cad.zju.edu.cn/home/jin/tog2022/tog2022.pdf)
+* [Efficiently rendering glTF models - A WebGPU Case Study](https://toji.github.io/webgpu-gltf-case-study/)
+* [WebGPU Samples](https://austin-eng.com/webgpu-samples)
