@@ -1314,6 +1314,7 @@ export default class GltfRenderer
         let array = new Float32Array(arrayBuffer, 0, 4);
         var p = this.gltf_group.targetPosition;
         array.set(p);
+        console.log(p);
         this.device.queue.writeBuffer(this.targetPosBuffer, 0, arrayBuffer);
     }
     setInstanceBuffer()

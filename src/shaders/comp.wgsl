@@ -238,7 +238,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   var kDeparture = 600.0;
   var ROTATIONTHRESHOLD = 0.1;
   var OFFSET = 10.0;
-  var kSeek = 10.0;
+  var kSeek = 100.0;
   var idx = GlobalInvocationID.x;
   var seed = vec3<f32>(f32(idx), f32(idx), f32(idx));
 
@@ -323,7 +323,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   //m_translate = translate(m_translate,velocity.x, velocity.y, velocity.z);
   //m_translate = translate(m_translate,0, 0.0, 0);
 
-  m_translate = bump(u32(idx), m_translate);
+  //m_translate = bump(u32(idx), m_translate);
 
   //x, y, z rotation
   var f = vec2<f32>(forwardData[idx].x, forwardData[idx].z);
@@ -349,7 +349,7 @@ fn simulate(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>)
   m_rotation = localRotationMatrix * m_rotation;
 
   m = m_translate * m_rotation * m_scale;
-  //transform[idx] = m;
+  transform[idx] = m;
   velocitiesData[idx] = vec4<f32>(vDesired.x, vDesired.y,vDesired.z, 0); 
 //======================================================================================//
 

@@ -175,7 +175,7 @@ export default class Application
             return;
         }
         this.gltf_butterfly.targetPosition = vec4.fromValues(controls.x, controls.y, controls.z, 0);
-        console.log(this.gltf_butterfly.targetPosition);
+       // console.log(this.gltf_butterfly.targetPosition);
     }
     
     async initScene()
