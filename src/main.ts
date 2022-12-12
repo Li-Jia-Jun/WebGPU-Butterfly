@@ -58,7 +58,7 @@ export default class Application
     // GUI
     controls = {
         instance_num: 1,
-        'Enable Procedural Color': this.enableProcedural,
+        'Enable Procedural Color': () => {this.enableProcedural();},
         frequency: 1,
         amplitude: 1,
         air_density: 1,
@@ -67,7 +67,6 @@ export default class Application
 
     enableProcedural()
     {
-        console.log(this);
         if (this.renderer_butterfly.procedural == 0)
         {
             this.renderer_butterfly.procedural = 1;
@@ -76,7 +75,7 @@ export default class Application
         {
             this.renderer_butterfly.procedural = 0;
         }
-        console.log(this.renderer_butterfly.procedural);
+        // console.log(this.renderer_butterfly.procedural);
     }
     constructor(){}
 
@@ -169,8 +168,8 @@ export default class Application
 
         this.gltf_scene = new GLTFGroup();
         await this.gltf_scene.init(
-            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
-            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
+            // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest/scene.gltf',
+            'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/forest_diorama/scene3.gltf',
             // 'https://raw.githubusercontent.com/Li-Jia-Jun/WebGPU-Butterfly/main/models/trees_and_foliage/scene2.gltf',        
             1,
             ['Scene'],

@@ -503,7 +503,7 @@ export default class GltfRenderer
         let normalMapGPUTexture = normalMapImgIdx >= 0 ? this.textures[normalMapImgIdx] : this.emptyTexture;
         let metallicRoughnessGPUTexture = metallicRoughnessImgIdx >= 0 ? this.textures[metallicRoughnessImgIdx] : this.emptyTexture;
 
-
+        // console.log("procedual = " + this.procedural);
         let textureInfoArrayBuffer = new Float32Array([baseColorIdx, normalMapIdx, metallicRoughnessTextureIdx, this.procedural]).buffer;
         
         // Material Info Buffer
