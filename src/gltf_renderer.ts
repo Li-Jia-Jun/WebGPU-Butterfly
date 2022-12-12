@@ -1313,7 +1313,6 @@ export default class GltfRenderer
         let arrayBuffer = new ArrayBuffer(4 * Float32Array.BYTES_PER_ELEMENT);
         let array = new Float32Array(arrayBuffer, 0, 4);
         var p = this.gltf_group.targetPosition;
-        console.log("nmsl: " + p);
         array.set(p);
         this.device.queue.writeBuffer(this.targetPosBuffer, 0, arrayBuffer);
     }
