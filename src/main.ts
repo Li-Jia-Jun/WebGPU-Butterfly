@@ -96,18 +96,18 @@ export default class Application
             // GUI
             const gui = new DAT.GUI();
             gui.width = 300;
-            gui.add(this.controls, 'instance_num', 1, 500).step(1).name('Number of Butterflies')
+            gui.add(this.controls, 'instance_num', 1, 1000).step(1).name('Number of Butterflies')
             .onChange(() => {
                 this.onInstanceChanged();
             });
-            gui.add(this.controls, 'Enable Procedural Color');
+            gui.add(this.controls, 'Enable Procedural Color').name('Procedural Color On/Off');
             var groupGUI = gui.addFolder('Group Behavior');
             var targetPosGUI = groupGUI.addFolder("Target Position");
             targetPosGUI.add(this.controls, 'x').onChange(() => {this.onPositionChange();});
             targetPosGUI.add(this.controls, 'y').onChange(() => {this.onPositionChange();});
             targetPosGUI.add(this.controls, 'z').onChange(() => {this.onPositionChange();});
 
-            groupGUI.add(this.controls, 'group_behavior', { wander: 'wander', arrival: 'arrival', departure: 'departure' }).name('Target Position').onChange(() => { this.onBehaviorChange(); });;
+            groupGUI.add(this.controls, 'group_behavior', { wander: 'wander', arrival: 'arrival', departure: 'departure' }).name('Behavior Mode').onChange(() => { this.onBehaviorChange(); });;
 
             // HTML stuff
             this.canvas = document.getElementById('gfx') as HTMLCanvasElement;
@@ -344,7 +344,7 @@ export default class Application
     {
         // Camera Pos
         let pos = this.camera.position;
-        this.#camPosDisplay.innerHTML = "Camera Position: [" + pos[0].toFixed(2) + ", " + pos[1].toFixed(2) + ", " + pos[2].toFixed(2) + "]";
+        //this.#camPosDisplay.innerHTML = "Camera Position: [" + pos[0].toFixed(2) + ", " + pos[1].toFixed(2) + ", " + pos[2].toFixed(2) + "]";
     }
 
     run = (timestamp : number) =>

@@ -118,19 +118,37 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32>
 
     if (materialInfo.textureInfo[3] == 1.0)
     {
-        if(u32(input.instance % 4) == 0)
+        let idx = u32(input.instance);
+        // let col = noise_gen1(input.instance);
+        // if (col < 0.25)
+        // {
+        //     return vec4(baseColor.r, baseColor.g, baseColor.b, 0.0);
+        // }
+        // else if(col < 0.5)
+        // {
+        //     return vec4(baseColor.g, baseColor.b, baseColor.r, 0.0);
+        // }
+        // else if (col < 0.75)
+        // {
+        //     return vec4(baseColor.b, baseColor.g, baseColor.r, 0.0);
+        // }
+        // else
+        // {
+        //     return vec4(baseColor.b, baseColor.g, baseColor.b, 0.0);
+        // }
+        if(idx % 4 == 0)
         {
             return vec4(baseColor.r, baseColor.g, baseColor.b, 0.0);
         }
-        else if (u32(input.instance % 4) == 1)
+        else if(idx % 4 == 1)
         {
             return vec4(baseColor.g, baseColor.b, baseColor.r, 0.0);
         }
-        else if (u32(input.instance % 4) == 2)
+        else if(idx % 4 == 2)
         {
             return vec4(baseColor.b, baseColor.g, baseColor.r, 0.0);
         }
-        else
+        else 
         {
             return vec4(baseColor.b, baseColor.g, baseColor.b, 0.0);
         }
